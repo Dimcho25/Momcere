@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v2.0.0 - Neural Chat</title>
+    <title>DimJiPiTi v3.1.0 - Dynamic Call Core</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -17,56 +17,85 @@
             --border: #27272a;
             --user-msg: #1a1a1a;
             --bot-msg: #003311;
+            --call-bg: rgba(0, 0, 0, 0.95);
         }
 
         body { background-color: var(--bg); color: var(--text); font-family: 'Menlo', 'Courier New', monospace; margin: 0; padding: 15px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; overflow: hidden;}
-        .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; height: 100%; }
+        .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; height: 100%; position: relative; }
         
-        .header { text-align: center; margin-bottom: 10px; flex-shrink: 0;}
+        .header { text-align: center; margin-bottom: 10px; flex-shrink: 0; transition: all 0.3s;}
         .title { font-size: 2.4rem; font-weight: bold; color: var(--text); margin: 0; letter-spacing: 2px;}
         .title span { color: var(--accent); }
         .subtitle { font-size: 0.85rem; font-weight: bold; color: #71717a; margin-top: 2px; letter-spacing: 4px; text-transform: uppercase;}
 
-        .main-grid { display: grid; grid-template-columns: 350px 1fr 300px; gap: 15px; flex-grow: 1; min-height: 0; }
+        .main-grid { display: grid; grid-template-columns: 350px 1fr 300px; gap: 15px; flex-grow: 1; min-height: 0; transition: all 0.5s ease-in-out;}
 
         /* LEFT COL: 3D + Settings */
-        .left-col { display: flex; flex-direction: column; gap: 15px; }
-        .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center;}
-        #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab;}
+        .left-col { display: flex; flex-direction: column; gap: 15px; z-index: 10;}
+        .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease-in-out;}
+        #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab; transition: all 0.5s ease-in-out;}
         #canvas-container:active { cursor: grabbing; }
         #loading-text { position: absolute; color: var(--accent); font-weight: bold; animation: pulse 1.5s infinite; pointer-events: none;}
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-        .settings-panel { background-color: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px;}
+        .settings-panel { background-color: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s;}
         .settings-header { color: #71717a; font-size: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; font-weight: bold; letter-spacing: 1px;}
         .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;}
         .slider-row label { font-weight: bold; color: var(--text); min-width: 120px;}
         .slider-row span { color: var(--accent); }
         input[type="range"] { flex-grow: 1; margin: 0 10px; cursor: pointer; accent-color: var(--accent); }
         
-        .btn-toggle { background-color: rgba(0, 255, 65, 0.1); color: var(--accent); border: 1px solid var(--accent); padding: 12px; font-family: 'Menlo', monospace; font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s; width: 100%;}
-        .btn-toggle.off { background-color: rgba(255, 51, 102, 0.1); color: var(--alert); border: 1px solid var(--alert); }
-
         /* CENTER COL: Chat */
-        .chat-col { display: flex; flex-direction: column; background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-col { display: flex; flex-direction: column; background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;}
+        .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth;}
         .msg { max-width: 85%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; font-size: 0.95rem; word-wrap: break-word;}
         .msg.user { align-self: flex-end; background-color: var(--user-msg); border: 1px solid var(--border); border-bottom-right-radius: 2px;}
         .msg.bot { align-self: flex-start; background-color: var(--bot-msg); border: 1px solid var(--accent); color: var(--accent); border-bottom-left-radius: 2px;}
         .typing-indicator { align-self: flex-start; color: var(--accent); font-size: 0.85rem; font-style: italic; display: none; padding-left: 10px;}
 
-        .chat-input-area { display: flex; padding: 15px; background-color: #050505; border-top: 1px solid var(--border); gap: 10px;}
+        .chat-input-area { display: flex; flex-direction: column; padding: 15px; background-color: #050505; border-top: 1px solid var(--border); gap: 10px;}
+        .chat-input-row { display: flex; gap: 10px; }
         .chat-input { flex-grow: 1; background-color: var(--card); border: 1px solid var(--border); padding: 15px; color: var(--text); font-family: 'Menlo', monospace; border-radius: 6px; font-size: 1rem;}
         .chat-input:focus { outline: none; border-color: var(--accent); }
-        .btn-send { background-color: var(--accent); color: #000; border: none; padding: 0 30px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1.1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;}
+        
+        .btn-send { background-color: var(--accent); color: #000; border: none; padding: 0 20px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;}
         .btn-send:hover { background-color: #00cc33; }
+        
+        .btn-call { background-color: rgba(0, 255, 65, 0.15); color: var(--accent); border: 1px solid var(--accent); padding: 15px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;}
+        .btn-call:hover { background-color: rgba(0, 255, 65, 0.3); }
 
         /* RIGHT COL: Debug/Engine Log */
-        .log-col { background-color: #000; border: 1px solid var(--border); padding: 15px; border-radius: 8px; overflow-y: auto; font-size: 0.75rem; line-height: 1.4; color: #a1a1aa; font-family: monospace;}
+        .log-col { background-color: #000; border: 1px solid var(--border); padding: 15px; border-radius: 8px; overflow-y: auto; font-size: 0.75rem; line-height: 1.4; color: #a1a1aa; font-family: monospace; transition: all 0.3s;}
         .log-col span.info { color: #3b82f6; }
         .log-col span.warn { color: #f59e0b; }
         .log-col span.success { color: var(--accent); }
         .log-col span.user-query { color: #ec4899; }
+
+        /* ========================================= */
+        /* CALL OVERLAY UI */
+        /* ========================================= */
+        .call-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--call-bg); z-index: 5;
+            display: none; flex-direction: column; align-items: center; justify-content: flex-end;
+            border-radius: 12px; backdrop-filter: blur(10px); padding-bottom: 50px;
+        }
+        
+        .call-status { font-size: 1.2rem; font-weight: bold; color: var(--accent); letter-spacing: 4px; margin-bottom: 30px; text-transform: uppercase;}
+        
+        .live-transcript { width: 60%; text-align: center; min-height: 80px; color: var(--text); font-size: 1.4rem; font-style: italic; opacity: 0.8; margin-bottom: 30px; line-height: 1.4;}
+
+        .btn-end-call { background-color: var(--alert); color: #fff; border: none; padding: 15px 40px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1.2rem; border-radius: 30px; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 102, 0.4);}
+        .btn-end-call:hover { background-color: #ff0033; transform: scale(1.05);}
+
+        /* CALL MODE STATE CLASSES */
+        body.call-mode .header { opacity: 0; pointer-events: none; height: 0; margin: 0; }
+        body.call-mode .settings-panel, body.call-mode .chat-col, body.call-mode .log-col { opacity: 0; pointer-events: none; display: none;}
+        body.call-mode .main-grid { display: flex; justify-content: center; align-items: center; }
+        
+        body.call-mode .left-col { width: 100%; max-width: 600px; align-items: center; justify-content: center; margin-bottom: 150px; z-index: 10;}
+        body.call-mode .visual-stage { width: 100%; background: transparent; border: none; box-shadow: none; }
+        body.call-mode #canvas-container { border-radius: 50%; box-shadow: 0 0 50px rgba(0, 255, 65, 0.2); border: 2px solid rgba(0, 255, 65, 0.3);}
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
@@ -78,7 +107,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v2.0.0-beta / NLP Engine Active</div>
+        <div class="subtitle">v3.1.0 / Dynamic Call Core</div>
     </div>
 
     <div class="main-grid">
@@ -89,45 +118,53 @@
             </div>
             
             <div class="settings-panel">
-                <div class="settings-header">NLP PARAMETERS</div>
+                <div class="settings-header">SCRAMBLER TUNING</div>
                 <div class="slider-row">
-                    <label>TEMPERATURE: <span id="tempDisp">0.7</span></label>
+                    <label title="Low: Accurate. High: Chaotic.">CHAOS (TEMP): <span id="tempDisp">0.7</span></label>
                     <input type="range" id="tempSlider" min="0.1" max="1.0" step="0.1" value="0.7" oninput="updateUI()">
                 </div>
-                <div class="slider-row">
-                    <label>SPIN SPEED: <span id="spinDisp">0.5</span></label>
-                    <input type="range" id="spinSlider" min="0" max="5" step="0.1" value="0.5" oninput="updateUI()">
-                </div>
             </div>
-            <button class="btn-toggle" id="audioToggle" onclick="toggleAudio()">🔊 AUDIO: ON</button>
         </div>
 
         <div class="chat-col">
             <div class="chat-history" id="chatHistory">
-                <div class="msg bot">System Initialized. NLP Core Loaded. Text me.</div>
+                <div class="msg bot">System Initialized. Text me or call me. Ras shvebi?</div>
             </div>
             <div class="typing-indicator" id="typingIndicator">DimJiPiTi is typing...</div>
             <div class="chat-input-area">
-                <input type="text" id="chatInput" class="chat-input" placeholder="Initiate query..." onkeypress="handleKeyPress(event)">
-                <button class="btn-send" onclick="sendMessage()">SEND</button>
+                <div class="chat-input-row">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                    <button class="btn-send" onclick="sendMessage()">SEND</button>
+                </div>
+                <button class="btn-call" id="initCallBtn" onclick="initiateCallSequence()">📞 CALL DIMJIPITI</button>
             </div>
         </div>
 
         <div class="log-col" id="debugLog">
-            <span class="info">[SYSTEM] Initializing Natural Language Processing...</span><br>
-            <span class="info">[SYSTEM] Compiling corpus data...</span><br>
-            <span class="success">[SYSTEM] Ready.</span><br><br>
+            <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
+            <span class="info">[SYSTEM] Continuous VAD algorithm loaded...</span><br>
+            <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
+    </div>
+
+    <div class="call-overlay" id="callOverlay">
+        <div class="call-status" id="callStatus">CONNECTING...</div>
+        <div class="live-transcript" id="liveTranscript"></div>
+        <button class="btn-end-call" onclick="endCall()">END CALL</button>
     </div>
 </div>
 
 <script>
     // ==========================================
-    // 1. 3D RENDER ENGINE (PRESERVED)
+    // 1. 3D RENDER ENGINE & HEAD TRACKING
     // ==========================================
     let scene, camera, renderer, faceMesh, controls;
-    let isSpeaking = false, mouthMesh = null, mouthMorphIndex = -1;
+    let is3DSpeaking = false, mouthMesh = null, mouthMorphIndex = -1;
     let targetMouthValue = 0, currentMouthValue = 0, lipSyncInterval;
+    
+    // Head Tracking Variables
+    let targetHeadRotX = 0, targetHeadRotY = 0, targetHeadRotZ = 0;
+    let headMovementInterval;
 
     function init3D() {
         const container = document.getElementById('canvas-container');
@@ -140,7 +177,7 @@
         container.appendChild(renderer.domElement);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; controls.dampingFactor = 0.05; controls.autoRotate = true; controls.autoRotateSpeed = 0.5; controls.enableZoom = true;
+        controls.enableDamping = true; controls.dampingFactor = 0.05; controls.enableZoom = false; controls.enablePan = false;
         
         scene.add(new THREE.DirectionalLight(0xffffff, 3.0).position.set(2, 2, 5)); 
         scene.add(new THREE.AmbientLight(0x404040, 4.0));
@@ -158,16 +195,41 @@
     function animate3D() {
         requestAnimationFrame(animate3D); if (controls) controls.update();
         if (faceMesh) {
+            // Mouth Animation
             currentMouthValue += (targetMouthValue - currentMouthValue) * 0.3; 
             if (mouthMesh && mouthMorphIndex !== -1) mouthMesh.morphTargetInfluences[mouthMorphIndex] = currentMouthValue;
-            else if (isSpeaking) faceMesh.position.y = currentMouthValue * -0.2; 
+            else if (is3DSpeaking) faceMesh.position.y = currentMouthValue * -0.2; 
             else faceMesh.position.y += (0 - faceMesh.position.y) * 0.1; 
+
+            // Dynamic Head Tracking (Smooth interpolation)
+            faceMesh.rotation.x += (targetHeadRotX - faceMesh.rotation.x) * 0.05;
+            faceMesh.rotation.y += (targetHeadRotY - faceMesh.rotation.y) * 0.05;
+            faceMesh.rotation.z += (targetHeadRotZ - faceMesh.rotation.z) * 0.05;
         }
         renderer.render(scene, camera);
     }
 
-    function startLipSync() { clearInterval(lipSyncInterval); targetMouthValue = 0; lipSyncInterval = setInterval(() => { targetMouthValue = (Math.random() > 0.3) ? 0.3 + (Math.random() * 0.7) : 0; }, 120); }
-    function stopLipSync() { clearInterval(lipSyncInterval); targetMouthValue = 0; }
+    function start3DLipSync() { 
+        clearInterval(lipSyncInterval); clearInterval(headMovementInterval);
+        
+        // Fast mouth movements
+        lipSyncInterval = setInterval(() => { targetMouthValue = (Math.random() > 0.3) ? 0.3 + (Math.random() * 0.7) : 0; }, 120); 
+        
+        // Random subtle head panning while speaking
+        headMovementInterval = setInterval(() => {
+            targetHeadRotX = (Math.random() - 0.5) * 0.2; // Slight nod
+            targetHeadRotY = (Math.random() - 0.5) * 0.4; // Slight shake/turn
+            targetHeadRotZ = (Math.random() - 0.5) * 0.1; // Slight tilt
+        }, 800);
+    }
+
+    function stop3DLipSync() { 
+        clearInterval(lipSyncInterval); clearInterval(headMovementInterval);
+        targetMouthValue = 0; 
+        
+        // Return head to center smoothly when done talking
+        targetHeadRotX = 0; targetHeadRotY = 0; targetHeadRotZ = 0;
+    }
 
     function loadBuiltInModel() {
         const loader = new THREE.GLTFLoader();
@@ -201,23 +263,251 @@
     }
 
     // ==========================================
-    // 2. MASSIVE DEEP-LORE CORPUS (DIMAMIRANASHVI)
+    // 2. THE DIAL TONE & CALL SEQUENCE
     // ==========================================
-    const corpus = [
-        "tarded ahh nga", "ranairad moxda es vafshe", "ara dzma araaa", "bicho uraa", "chamovedio dawera", "titon araa? :D", "what es? :D", 
-        "amis fishka isaa tan ro martivad chasatvirti saitia", "imena sheni ideis pontia", "einaris restoranshi mivdivar saqmian shexvedraze",
-        "PLIAJZE VAAAAAAAR", "pliajze var", "egre vibazreb amieridan", "gushin mwers vici teona vinc ario", "xo anu saxeli saidan prosta",
-        "imedis gmirebi gavxdet", "shevacherot sanam droa gavacherot", "nata2is shansi ari?", "da ras fiqrob", "mara agar vutxari arapeir",
-        "bijo lobom ro miwera manaxa eg mec", "piriqit dzmaaa zustad", "orsuli qalebi ro shvebian egre davdgebi", "fotosesia davjavshnot 😇😇",
-        "cvetshiii", "shuzoidi israelisti", "wamayile am rojas", "wamiyvane cminda micaze 🙏🙏", "shen gaq eseti turebi?", 
-        "kochli darchebi 🥺🥺🥺 tore gaggijebs", "ro ar amodzrao daifiqsire ramit", "tovebs kai xani tkivilebs pizdecia grdzoba",
-        "uiuiii ranairad daikide eg", "prosta dietit vchalichob ra", "au ara davikide varjishi", "shena narmalna", 
-        "rogor gavaketo ver vxvdebi", "ver vaketb eset simgerebs :(", "ARAAAAA", "1.73-75 arvici ver gavige 82.5 max",
-        "eget faqtorebshi kargad var", "au ara arvici risi bralia", "ori kvira giji viyavi exa davwynardi", "ragaca sxva mgonia ver vxvdebi",
-        "tan isedac veridebi", "bicho ravi game dziritadad arc mshivdeba", "an rame yleoba davimarte romelime organoze ragaca an zaiobia",
-        "imena 1-2 saati rasac ar unda vchamde magizianebssavit", "ro vigvidxeb ragacnairad var xolme", "sauzmeze tu dzaan guli ar mereva kvercxs vcham xolme",
-        "mara salatebi xshirad asetuise", "au ravi exa ro amovvardi xan ra xan ra", "xo chifsebs da ylinjebs isedac veridebi",
-        "gabos gavs dzmaaaaaa xooo :Dddd", "suicidis tipebi geebi da qurdebi", "adre iyo vigaca werda mand qurdebi dadiano shavebi acviato aqciis monawileebs",
+    let audioCtx = null;
+    let isCallActive = false;
+
+    function playDialTone() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Dial tone uses 350Hz and 440Hz combined
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        osc1.type = 'sine'; osc1.frequency.value = 350;
+        osc2.type = 'sine'; osc2.frequency.value = 440;
+
+        // Fade in/out slightly to prevent popping
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + 1.8);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.0);
+
+        osc1.connect(gainNode); osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc1.start(); osc2.start();
+        osc1.stop(audioCtx.currentTime + 2); osc2.stop(audioCtx.currentTime + 2);
+    }
+
+    function initiateCallSequence() {
+        const btn = document.getElementById("initCallBtn");
+        btn.innerText = "DIALING...";
+        btn.disabled = true;
+
+        playDialTone();
+
+        // Wait 2 seconds for the dial tone to finish, then snap into Call Mode
+        setTimeout(() => {
+            btn.innerText = "📞 CALL DIMJIPITI";
+            btn.disabled = false;
+            enterCallMode();
+        }, 2000);
+    }
+
+    function enterCallMode() {
+        isCallActive = true;
+        document.body.classList.add('call-mode');
+        document.getElementById("callOverlay").style.display = "flex";
+        
+        // Force the 3D canvas to resize to the new massive layout
+        setTimeout(() => {
+            const container = document.getElementById('canvas-container');
+            const newRect = container.getBoundingClientRect();
+            renderer.setSize(newRect.width, newRect.height);
+            camera.aspect = newRect.width / newRect.height;
+            camera.updateProjectionMatrix();
+        }, 500); // Wait for CSS transition to finish
+
+        logDebug("success", "[CALL] Connection established.");
+        
+        // Kick off the permanent microphone listener
+        initContinuousSpeechRecognition();
+    }
+
+    function endCall() {
+        isCallActive = false;
+        document.body.classList.remove('call-mode');
+        document.getElementById("callOverlay").style.display = "none";
+        
+        window.speechSynthesis.cancel();
+        if (recognition) {
+            recognition.onend = null; // Stop it from auto-restarting
+            recognition.stop();
+        }
+        
+        clearTimeout(silenceTimer);
+        document.getElementById('liveTranscript').innerText = "";
+        
+        // Resize canvas back to normal
+        setTimeout(() => {
+            const container = document.getElementById('canvas-container');
+            const newRect = container.getBoundingClientRect();
+            renderer.setSize(newRect.width, newRect.height);
+            camera.aspect = newRect.width / newRect.height;
+            camera.updateProjectionMatrix();
+        }, 500);
+
+        logDebug("info", "[CALL] Terminated.");
+    }
+
+
+    // ==========================================
+    // 3. CONTINUOUS VAD (VOICE ACTIVITY DETECTION)
+    // ==========================================
+    let recognition = null;
+    let silenceTimer = null;
+    let finalTranscript = '';
+
+    function initContinuousSpeechRecognition() {
+        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            document.getElementById('callStatus').innerText = "VOICE NOT SUPPORTED";
+            document.getElementById('callStatus').style.color = "var(--alert)";
+            return;
+        }
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        // For continuous monitoring without asking for permissions repeatedly, 
+        // we use continuous=true and handle the silence ourselves.
+        recognition.continuous = true; 
+        recognition.interimResults = true;
+        recognition.lang = 'ka-GE'; 
+
+        recognition.onstart = function() {
+            document.getElementById('callStatus').innerText = "LISTENING";
+            document.getElementById('callStatus').style.color = "var(--accent)";
+        };
+
+        recognition.onresult = function(event) {
+            // Instantly stop the bot from speaking if you interrupt it
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            clearTimeout(silenceTimer); // Reset silence countdown
+            
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " ";
+                else interim += event.results[i][0].transcript;
+            }
+            
+            document.getElementById('liveTranscript').innerText = finalTranscript + interim;
+
+            // Silence Detection: 1.5 seconds of no new words = process the speech
+            silenceTimer = setTimeout(() => {
+                if (finalTranscript.trim() !== "" || interim.trim() !== "") {
+                    let userMsg = finalTranscript + interim;
+                    logDebug("user-query", `[MIC] ${userMsg}`);
+                    
+                    finalTranscript = ''; // Reset for next batch
+                    document.getElementById('liveTranscript').innerText = "...";
+                    
+                    triggerCallResponse(userMsg);
+                }
+            }, 1500); 
+        };
+
+        recognition.onerror = function(event) { 
+            logDebug("warn", "[MIC ERROR] " + event.error); 
+        };
+
+        recognition.onend = function() {
+            // The browser sometimes stops recognition automatically.
+            // If the call is still active, instantly restart it silently.
+            if (isCallActive) {
+                try { recognition.start(); } catch(e) {}
+            }
+        };
+
+        try { recognition.start(); } catch(e) {}
+    }
+
+    function triggerCallResponse(userText) {
+        document.getElementById('callStatus').innerText = "THINKING...";
+        document.getElementById('callStatus').style.color = "#f59e0b";
+        
+        appendMessage(userText, 'user');
+        
+        // Slight delay to feel natural
+        setTimeout(() => {
+            const response = processNLP(userText);
+            appendMessage(response, 'bot');
+            
+            document.getElementById('callStatus').innerText = "SPEAKING";
+            document.getElementById('liveTranscript').innerText = response;
+            
+            playCallTTS(response);
+        }, 600); 
+    }
+
+    function playCallTTS(text) {
+        window.speechSynthesis.cancel(); 
+        let cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        let msg = new SpeechSynthesisUtterance(cleanText);
+        msg.pitch = 0.65; msg.rate = 0.8; 
+        
+        let voices = window.speechSynthesis.getVoices();
+        let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
+        if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+
+        msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
+        
+        msg.onend = msg.onerror = () => { 
+            is3DSpeaking = false; stop3DLipSync(); 
+            if(isCallActive) {
+                document.getElementById('callStatus').innerText = "LISTENING";
+                document.getElementById('callStatus').style.color = "var(--accent)";
+                document.getElementById('liveTranscript').innerText = "";
+            }
+        };
+        
+        window.speechSynthesis.speak(msg);
+    }
+
+
+    // ==========================================
+    // 4. THE RAW DATA & NLP SCRAMBLER
+    // ==========================================
+    const rawCorpus = [
+        "tvalis amosageblad aris martla", "neta ra danishnuleba aqvs", ":Dddd ra magaria",
+        "naisnaisss", "yoo juzepes icnoob?", "ramdeni saerto gvkolia", "aa xarascho dzma", 
+        "prosta dietit vchalichob ra", "yvelaze minda", "awh :(", "ara ukve dnebaa", "Imenaaaa",
+        "wibaxa da ukves tamashi", "erti rac iyo bolos", "rodis eg", "Wavedit bozishvuliciyo", 
+        "sad gaaxsendat prosta", ":333", "ra", "bavsvi", "elena", "martqlia amito ar varga", 
+        "shen exla damafollowe tore", "mteli diskografia maq dadebuli storyshi :)))", 
+        "girebs sanam davitrev prosta ajimaniebi buqnebi rame rume", "au me rame saxlshi unda daviwyi",
+        "sad xart bichooo", "bijo", "malrtaia", "da avidet ertad barem", "qvevit vart gelit", 
+        "me gogshela da kote vart ager", "mapbmalobamlapba", "Opaopaopaaaaaaaaaa", "mombadze", 
+        "orive mudmiv habitusshi vart ra", "mash", "saidan gaadzret", "😈😈😈", ";dddgdffffd", "kklex", 
+        "halloween aqcia", "gepeis fuli davxarje", "mfrinav babuebs vagenerireb bolo erti saatia", 
+        "11 VIZITI DAMINISHNA KBILIS RQIMMA", "imena rachuli lobianebivit dagvkecaven", 
+        "kastracias damijavshnian iashvilshi?", "orsuli qalebi ro shvebian egre davdgebi", 
+        "despoti blogspoti blowjobi stevejobsi", "tarded ahh nga", "ranairad moxda es vafshe", 
+        "ara dzma araaa", "bicho uraa", "chamovedio dawera", "titon araa? :D", "what es? :D", 
+        "amis fishka isaa tan ro martivad chasatvirti saitia", "imena sheni ideis pontia", 
+        "einaris restoranshi mivdivar saqmian shexvedraze", "PLIAJZE VAAAAAAAR", "pliajze var", 
+        "egre vibazreb amieridan", "gushin mwers vici teona vinc ario", "xo anu saxeli saidan prosta",
+        "imedis gmirebi gavxdet", "shevacherot sanam droa gavacherot", "nata2is shansi ari?", 
+        "da ras fiqrob", "mara agar vutxari arapeir", "bijo lobom ro miwera manaxa eg mec", 
+        "piriqit dzmaaa zustad", "fotosesia davjavshnot 😇😇", "cvetshiii", "shuzoidi israelisti", 
+        "wamayile am rojas", "wamiyvane cminda micaze 🙏🙏", "shen gaq eseti turebi?", 
+        "kochli darchebi 🥺🥺🥺 tore gaggijebs", "ro ar amodzrao daifiqsire ramit", 
+        "tovebs kai xani tkivilebs pizdecia grdzoba", "uiuiii ranairad daikide eg", 
+        "au ara davikide varjishi", "shena narmalna", "rogor gavaketo ver vxvdebi", 
+        "ver vaketb eset simgerebs :(", "ARAAAAA", "1.73-75 arvici ver gavige 82.5 max",
+        "eget faqtorebshi kargad var", "au ara arvici risi bralia", "ori kvira giji viyavi exa davwynardi", 
+        "ragaca sxva mgonia ver vxvdebi", "tan isedac veridebi", "bicho ravi game dziritadad arc mshivdeba", 
+        "an rame yleoba davimarte romelime organoze ragaca an zaiobia", 
+        "imena 1-2 saati rasac ar unda vchamde magizianebssavit", "ro vigvidxeb ragacnairad var xolme", 
+        "sauzmeze tu dzaan guli ar mereva kvercxs vcham xolme", "mara salatebi xshirad asetuise", 
+        "au ravi exa ro amovvardi xan ra xan ra", "xo chifsebs da ylinjebs isedac veridebi",
+        "gabos gavs dzmaaaaaa xooo :Dddd", "suicidis tipebi geebi da qurdebi", 
+        "adre iyo vigaca werda mand qurdebi dadiano shavebi acviato aqciis monawileebs",
         "xo prosta yvelaze giji daxasiatrbaa magati", "sauketeso eqimi romeltanac ro mival amdeni smisgan gadaylevebuli gadamarchens!!!",
         "sauketeso xodit sul mravals daeswari", "gilocav beberi nikushchiiii", "mara jer arvici ese samwuxarod mainc getyvi xval",
         "au bicho arvici zustad tu shevdzelb", "vtvlit tu ar vtvlit qurdul dzaladobas", "am dros ici ra mtrvali viyavi?",
@@ -227,13 +517,14 @@
         "yoveldge vuyureb chatshi rogor cdilobs xan vin xan vin amis garkvevas anda me ar daviwyeb garkvevas",
         "@everyone telaveli stumari chamodis moicodet", "the ol' cxovloba", "447 lari mchirdeba ro universitetis fuli gadavixado",
         "sigije aris rodesac ertsadaimaves imeoreb imis imedit rom shedegi sheicvleba", "ra yleobaa vpn", 
-        "mfrinav babuebs vagenerireb bolo erti saatia", "11 VIZITI DAMINISHNA KBILIS RQIMMA", "arao sxva problema wesit",
-        "ai gavarkvev kide tu chirdeba da vetyvi ro rame", "ara prosta nikastan sheviyvanet jer", "shen qeni mec ar moxhirs",
-        "tuarada we good fuli kaia", "ara chxbuia ar icoda nikam??? :))))", "lmfao ravi sasacilo iyo kipatastan agar vart ogondp",
-        "ki magati deda movtyan da mere me da kote amovalt", "tesli ideaa 7 mand viqnebit", "me davamtavre momiloce ra fuli baratze gvaq yvelas",
-        "mara dzbenis processhi mainc didebi vipove auuu ver vipove", "da sisqreshi 10", "imena gvagulaeben iqqnbian wamo registrir",
-        "damolesteba pirvelad davserche vaime ar vicodi ro marto bavshvebze itqmeboda", "gamovylevdebi mand ro gavicno martla vinme",
-        "au davregistrirde magaze mirchev? wadiiiii", "jer shesvlaze mere tualetze mere sasmelze", "es ar aris orgia dzmebi gulaoben",
+        "arao sxva problema wesit", "ai gavarkvev kide tu chirdeba da vetyvi ro rame", "ara prosta nikastan sheviyvanet jer", 
+        "shen qeni mec ar moxhirs", "tuarada we good fuli kaia", "ara chxbuia ar icoda nikam??? :))))", 
+        "lmfao ravi sasacilo iyo kipatastan agar vart ogondp", "ki magati deda movtyan da mere me da kote amovalt", 
+        "tesli ideaa 7 mand viqnebit", "me davamtavre momiloce ra fuli baratze gvaq yvelas",
+        "mara dzbenis processhi mainc didebi vipove auuu ver vipove", "da sisqreshi 10", 
+        "imena gvagulaeben iqqnbian wamo registrir", "damolesteba pirvelad davserche vaime ar vicodi ro marto bavshvebze itqmeboda", 
+        "gamovylevdebi mand ro gavicno martla vinme", "au davregistrirde magaze mirchev? wadiiiii", 
+        "jer shesvlaze mere tualetze mere sasmelze", "es ar aris orgia dzmebi gulaoben",
         "kachistan ertad shevchamdi beat vinmes", "120 bpmshi ro ajgarunot 😇😇", "rs gulaoobs dges ar gaq? 😈😈",
         "gushinac? ra yle var mekitxa neta a aba tipsy bariooo if if iff", "didi soundsistema da nashebii",
         "davai nodo gulavi moxode kojorshi da eseni shevawuxot da ar davpatijot 😈😈😈", "dro midis scenarebi rcheba",
@@ -265,129 +556,108 @@
         "da metqi telefoni gavtexe vaime da daimsxvra mtvralma telefoni chavkbiche", "dagxvirtavt tqveni dagxvritavs yvelas",
         "internetma gamicheda mixeil dzagnidze mixshobs internets GEI FIQREBI GEI FIQREBI O ARAAAA GATISHET ES GEI SIGNALEBI",
         "ai eSAAA AAE)#)R)#)#)#) davuconnectdebi", "romelic afilirebulia biznesmen mixeil dzagnidzestan romelic arvici vinaa THE RABBITHOLE GOES DEEP BROOO AAEEE",
-        "shps neocitylight yvelas qocs edzaxis ra avadmyofi rojaa", "imena rachuli lobianebivit dagvkecaven 😂😂😂😂",
-        "kastracias damijavshnian iashvilshi?", "wamo kachi shenc ra au ara ar minda meshinia eseti rameebis",
-        "es kacebi movidnen chem saxltan da wamoviyvano?", "despoti blogspoti blowjobi stevejobsi",
-        "mivxvdio igulismxma aaa memgoni ogilizma Rodis unda momeyola?", "skolasji ro zixar da koshmarebi geqneba imena sashushua",
-        "auuu chemi dedaaa movktan pirshi nu mattuebt", "ra yleobaa ise magxeka yle", "elephant ragav erqva",
-        "sait ariaan chemi birja shoria tavaxmellla", "SHEMISHVES LEFTSHU VAR BRATSI OPAAAA", "awh :( ara ukve dnebaa",
-        "sad gaaxsendat prosta Wavedit bozishvuliciyo", "gepeis fuli davxarje ooo 😈😈😈 kiii aa ui raaa ?? a",
-        "kaia gizisi 🤣🤣🤣🤣", "😭😭😭😭😭😭😭😭😭😭😭😭😭😭nephew😭😭😭😭😭😭😭😭😭😭😭😭😭😭"
+        "shps neocitylight yvelas qocs edzaxis ra avadmyofi rojaa", "mivxvdio igulismxma aaa memgoni ogilizma Rodis unda momeyola?", 
+        "skolasji ro zixar da koshmarebi geqneba imena sashushua", "auuu chemi dedaaa movktan pirshi nu mattuebt", 
+        "ra yleobaa ise magxeka yle", "elephant ragav erqva", "sait ariaan chemi birja shoria tavaxmellla", 
+        "SHEMISHVES LEFTSHU VAR BRATSI OPAAAA", "😭😭😭😭😭😭nephew😭😭😭😭😭😭"
     ];
 
-    // ==========================================
-    // 3. ADVANCED NLP ENGINE
-    // ==========================================
-    
-    // Markov Dictionary (Bi-gram mapping)
-    let markovDict = {};
-    let startingWords = [];
+    const fallbackConnectors = ["prosta", "anu", "xoda", "mara", "imena", "tan", "magito", "da", "ise vafshe"];
+    const emojis = [" 😡", " 😈", " 🤔", " 🥰", " 😑", " 😂", " 💀", " 🦇", " 🥶", " 😇", " 🥺", " :DDD"];
 
-    function buildMarkovModel() {
-        corpus.forEach(sentence => {
-            let words = sentence.trim().split(/\s+/);
-            if(words.length > 0) startingWords.push(words[0]);
-            
-            for(let i = 0; i < words.length - 2; i++) {
-                let key = words[i] + ' ' + words[i+1];
-                let next = words[i+2];
-                if(!markovDict[key]) markovDict[key] = [];
-                markovDict[key].push(next);
-            }
-        });
-        logDebug("success", "Markov Chain constructed. " + Object.keys(markovDict).length + " nodes mapped.");
+    let uniGramDict = {}; let biGramDict = {}; let starts = [];
+
+    function buildScramblerModel() {
+        try {
+            rawCorpus.forEach(sentence => {
+                let words = sentence.trim().split(/\s+/);
+                if(words.length === 0) return;
+                starts.push(words[0]);
+                for(let i = 0; i < words.length; i++) {
+                    let w1 = words[i];
+                    if(i < words.length - 1) {
+                        let w2 = words[i+1];
+                        if(!uniGramDict[w1]) uniGramDict[w1] = [];
+                        uniGramDict[w1].push(w2);
+                    }
+                    if(i < words.length - 2) {
+                        let w2 = words[i+1]; let w3 = words[i+2]; let key = w1 + " " + w2;
+                        if(!biGramDict[key]) biGramDict[key] = [];
+                        biGramDict[key].push(w3);
+                    }
+                }
+            });
+            logDebug("success", "Dataset Shredded. N-Grams mapped perfectly.");
+        } catch(e) { logDebug("warn", "Error building model: " + e.message); }
     }
 
-    function generateMarkovSentence(temp) {
-        let sentence = [];
-        // The higher the temp, the more random the starting word
-        let startWord = startingWords[Math.floor(Math.random() * startingWords.length)];
-        sentence.push(startWord);
-        
-        // Find a valid second word to start the chain
-        let validKeys = Object.keys(markovDict).filter(k => k.startsWith(startWord + " "));
-        if(validKeys.length === 0) return startWord; // fallback
-        
-        let initialKey = validKeys[Math.floor(Math.random() * validKeys.length)];
-        sentence = initialKey.split(" ");
-        
-        let currentKey = initialKey;
-        // Length 3 to 12 words roughly
-        let maxLength = Math.floor(Math.random() * 8) + 4; 
+    function generateScrambledSentence(temp) {
+        try {
+            let result = [];
+            let currentWord = starts[Math.floor(Math.random() * starts.length)];
+            if (!currentWord) currentWord = "prosta";
+            result.push(currentWord);
+            let maxLen = Math.floor(Math.random() * 6) + 3;
 
-        for(let i = 0; i < maxLength; i++) {
-            let possibleNext = markovDict[currentKey];
-            if(!possibleNext || possibleNext.length === 0) break;
-            
-            let nextWord = possibleNext[Math.floor(Math.random() * possibleNext.length)];
-            sentence.push(nextWord);
-            
-            let splitKey = currentKey.split(" ");
-            currentKey = splitKey[1] + " " + nextWord;
-        }
-
-        return sentence.join(" ");
+            for(let i = 1; i < maxLen; i++) {
+                let nextWord = null;
+                if (i >= 2 && Math.random() > (temp - 0.2)) {
+                    let prevWord = result[i-2]; let key = prevWord + " " + currentWord;
+                    if (biGramDict[key] && biGramDict[key].length > 0) nextWord = biGramDict[key][Math.floor(Math.random() * biGramDict[key].length)];
+                }
+                if (!nextWord && uniGramDict[currentWord] && uniGramDict[currentWord].length > 0) {
+                    nextWord = uniGramDict[currentWord][Math.floor(Math.random() * uniGramDict[currentWord].length)];
+                }
+                if (!nextWord) {
+                    result.push(fallbackConnectors[Math.floor(Math.random() * fallbackConnectors.length)]);
+                    currentWord = starts[Math.floor(Math.random() * starts.length)];
+                    result.push(currentWord);
+                    i++;
+                } else {
+                    result.push(nextWord); currentWord = nextWord;
+                }
+            }
+            return result.join(" ");
+        } catch (e) { return "xoda " + fallbackConnectors[Math.floor(Math.random() * fallbackConnectors.length)]; }
     }
 
     function searchCorpusByIntent(inputTokens) {
-        // Find sentences in corpus that share the most words with input
-        let bestMatch = "";
-        let maxScore = 0;
-
+        let bestMatch = ""; let maxScore = 0;
+        corpus = rawCorpus; // ensure variable exists
         corpus.forEach(sentence => {
-            let score = 0;
-            let sentenceTokens = sentence.toLowerCase().split(/\s+/);
-            
-            inputTokens.forEach(token => {
-                if(token.length > 2 && sentenceTokens.includes(token)) {
-                    score++;
-                }
-            });
-
-            if(score > maxScore) {
-                maxScore = score;
-                bestMatch = sentence;
-            }
+            let score = 0; let sentenceTokens = sentence.toLowerCase().split(/\s+/);
+            inputTokens.forEach(token => { if(token.length > 2 && sentenceTokens.includes(token)) score++; });
+            if(score > maxScore) { maxScore = score; bestMatch = sentence; }
         });
-
         return maxScore > 0 ? bestMatch : null;
     }
 
     function processNLP(userInput) {
-        let tokens = userInput.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/);
         let temp = parseFloat(document.getElementById("tempSlider").value);
-        
-        logDebug("user-query", ">> Input Tokenized: [" + tokens.join(", ") + "]");
-
-        let exactMatch = searchCorpusByIntent(tokens);
         let response = "";
+        let isRant = Math.random() > 0.95;
+        let numSentences = isRant ? (Math.floor(Math.random() * 4) + 3) : (Math.floor(Math.random() * 2) + 1);
 
-        // Temperature Logic: Low Temp = Exact Match. High Temp = Random Markov Generation
+        let exactMatch = searchCorpusByIntent(userInput.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/));
+
         if (exactMatch && Math.random() > (temp - 0.2)) {
-            logDebug("info", "[NLP] Intent match found. Fetching deep memory.");
             response = exactMatch;
-            // Maybe append a random chunk to make it unique
-            if(Math.random() > 0.5) response += " " + generateMarkovSentence(temp);
+            if(Math.random() > 0.5) response += " " + generateScrambledSentence(temp);
         } else {
-            logDebug("warn", "[NLP] Calculating new neural pathway via Markov Chain.");
-            let sentences = Math.random() > 0.5 ? 2 : 1;
-            for(let i=0; i<sentences; i++) {
-                response += generateMarkovSentence(temp) + (Math.random()>0.5 ? " " : "... ");
+            for(let i=0; i<numSentences; i++) {
+                response += generateScrambledSentence(temp) + (Math.random()>0.5 ? " " : "... ");
             }
         }
         
-        // Final pass for realism
         response = response.trim();
         if(!response.match(/[.!?]$/)) response += (Math.random() > 0.5 ? "" : "...");
+        if (Math.random() > 0.7) response += emojis[Math.floor(Math.random() * emojis.length)];
         return response;
     }
 
     // ==========================================
-    // 4. UI & LOGIC INTEGRATION
+    // 5. STANDARD CHAT UI INTEGRATION
     // ==========================================
-    
-    let audioEnabled = true;
-
     function logDebug(type, text) {
         const logBox = document.getElementById("debugLog");
         logBox.innerHTML += `<span class="${type}">${text}</span><br>`;
@@ -399,33 +669,6 @@
         const spinVal = parseFloat(document.getElementById("spinSlider").value);
         document.getElementById("spinDisp").innerText = spinVal.toFixed(1);
         if (controls) controls.autoRotateSpeed = spinVal;
-    }
-
-    function toggleAudio() {
-        audioEnabled = !audioEnabled; const btn = document.getElementById("audioToggle");
-        if (audioEnabled) { btn.className = "btn-toggle"; btn.innerText = "🔊 AUDIO: ON"; } 
-        else { btn.className = "btn-toggle off"; btn.innerText = "🔇 AUDIO: OFF"; window.speechSynthesis.cancel(); isSpeaking = false; stopLipSync(); }
-    }
-
-    function playTrashyTTS(text) {
-        if (!audioEnabled || !('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); 
-        let cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
-        let msg = new SpeechSynthesisUtterance(cleanText);
-        msg.pitch = 0.65; msg.rate = 0.8; 
-        
-        let voices = window.speechSynthesis.getVoices();
-        let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
-        if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
-
-        msg.onstart = () => { isSpeaking = true; startLipSync(); };
-        msg.onboundary = () => { targetMouthValue = 0.8 + (Math.random() * 0.2); };
-        msg.onend = msg.onerror = () => { isSpeaking = false; stopLipSync(); };
-        window.speechSynthesis.speak(msg);
-    }
-
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-        window.speechSynthesis.getVoices();
     }
 
     function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
@@ -441,15 +684,28 @@
         const typingIndicator = document.getElementById("typingIndicator");
         typingIndicator.style.display = "block";
         
-        // Simulated cognitive delay based on text complexity
-        const delay = 800 + Math.random() * 1500;
-        
         setTimeout(() => {
             typingIndicator.style.display = "none";
             const response = processNLP(text);
             appendMessage(response, 'bot');
-            playTrashyTTS(response);
-        }, delay);
+            
+            // If we are NOT in a call, play standard audio
+            if(!isCallActive) {
+                window.speechSynthesis.cancel(); 
+                let cleanText = response.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+                let msg = new SpeechSynthesisUtterance(cleanText);
+                msg.pitch = 0.65; msg.rate = 0.8; 
+                let voices = window.speechSynthesis.getVoices();
+                let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
+                if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+                msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
+                msg.onend = msg.onerror = () => { is3DSpeaking = false; stop3DLipSync(); };
+                window.speechSynthesis.speak(msg);
+            }
+            
+            const chatHistory = document.getElementById("chatHistory");
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }, 600 + Math.random() * 1200);
     }
 
     function appendMessage(text, sender) {
@@ -461,10 +717,14 @@
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    // BOOT SEQUENCE
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        window.speechSynthesis.getVoices();
+    }
+
     window.onload = () => {
         init3D();
-        buildMarkovModel();
+        buildScramblerModel();
     };
 </script>
 </body>
