@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.1.0 - Dynamic Call Core</title>
+    <title>DimJiPiTi v3.1.1 - Voice Patch</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -33,8 +33,11 @@
         /* LEFT COL: 3D + Settings */
         .left-col { display: flex; flex-direction: column; gap: 15px; z-index: 10;}
         .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease-in-out;}
-        #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab; transition: all 0.5s ease-in-out;}
+        
+        #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab; transition: all 0.5s ease-in-out; overflow: hidden;}
+        #canvas-container canvas { width: 100% !important; height: 100% !important; object-fit: cover; }
         #canvas-container:active { cursor: grabbing; }
+        
         #loading-text { position: absolute; color: var(--accent); font-weight: bold; animation: pulse 1.5s infinite; pointer-events: none;}
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
@@ -107,7 +110,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.1.0 / Dynamic Call Core</div>
+        <div class="subtitle">v3.1.1 / Voice Patch Applied</div>
     </div>
 
     <div class="main-grid">
@@ -162,7 +165,6 @@
     let is3DSpeaking = false, mouthMesh = null, mouthMorphIndex = -1;
     let targetMouthValue = 0, currentMouthValue = 0, lipSyncInterval;
     
-    // Head Tracking Variables
     let targetHeadRotX = 0, targetHeadRotY = 0, targetHeadRotZ = 0;
     let headMovementInterval;
 
@@ -195,13 +197,11 @@
     function animate3D() {
         requestAnimationFrame(animate3D); if (controls) controls.update();
         if (faceMesh) {
-            // Mouth Animation
             currentMouthValue += (targetMouthValue - currentMouthValue) * 0.3; 
             if (mouthMesh && mouthMorphIndex !== -1) mouthMesh.morphTargetInfluences[mouthMorphIndex] = currentMouthValue;
             else if (is3DSpeaking) faceMesh.position.y = currentMouthValue * -0.2; 
             else faceMesh.position.y += (0 - faceMesh.position.y) * 0.1; 
 
-            // Dynamic Head Tracking (Smooth interpolation)
             faceMesh.rotation.x += (targetHeadRotX - faceMesh.rotation.x) * 0.05;
             faceMesh.rotation.y += (targetHeadRotY - faceMesh.rotation.y) * 0.05;
             faceMesh.rotation.z += (targetHeadRotZ - faceMesh.rotation.z) * 0.05;
@@ -211,23 +211,17 @@
 
     function start3DLipSync() { 
         clearInterval(lipSyncInterval); clearInterval(headMovementInterval);
-        
-        // Fast mouth movements
         lipSyncInterval = setInterval(() => { targetMouthValue = (Math.random() > 0.3) ? 0.3 + (Math.random() * 0.7) : 0; }, 120); 
-        
-        // Random subtle head panning while speaking
         headMovementInterval = setInterval(() => {
-            targetHeadRotX = (Math.random() - 0.5) * 0.2; // Slight nod
-            targetHeadRotY = (Math.random() - 0.5) * 0.4; // Slight shake/turn
-            targetHeadRotZ = (Math.random() - 0.5) * 0.1; // Slight tilt
+            targetHeadRotX = (Math.random() - 0.5) * 0.2; 
+            targetHeadRotY = (Math.random() - 0.5) * 0.4; 
+            targetHeadRotZ = (Math.random() - 0.5) * 0.1; 
         }, 800);
     }
 
     function stop3DLipSync() { 
         clearInterval(lipSyncInterval); clearInterval(headMovementInterval);
         targetMouthValue = 0; 
-        
-        // Return head to center smoothly when done talking
         targetHeadRotX = 0; targetHeadRotY = 0; targetHeadRotZ = 0;
     }
 
@@ -235,8 +229,7 @@
         const loader = new THREE.GLTFLoader();
         const loadingText = document.getElementById('loading-text');
         const timeoutFailsafe = setTimeout(() => {
-            loadingText.innerHTML = "⚠️ MESH MOUNT FAILED.<br>CORS Blocked.";
-            loadingText.style.color = "var(--alert)"; loadingText.style.animation = "none";
+            loadingText.innerHTML = "⚠️ MESH MOUNT FAILED."; loadingText.style.color = "var(--alert)"; loadingText.style.animation = "none";
         }, 10000);
 
         loader.load('./perekur_MASK.glb', 
@@ -271,7 +264,6 @@
     function playDialTone() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        // Dial tone uses 350Hz and 440Hz combined
         const osc1 = audioCtx.createOscillator();
         const osc2 = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
@@ -279,7 +271,6 @@
         osc1.type = 'sine'; osc1.frequency.value = 350;
         osc2.type = 'sine'; osc2.frequency.value = 440;
 
-        // Fade in/out slightly to prevent popping
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
         gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
         gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + 1.8);
@@ -299,7 +290,6 @@
 
         playDialTone();
 
-        // Wait 2 seconds for the dial tone to finish, then snap into Call Mode
         setTimeout(() => {
             btn.innerText = "📞 CALL DIMJIPITI";
             btn.disabled = false;
@@ -309,39 +299,40 @@
 
     function enterCallMode() {
         isCallActive = true;
+        botIsTalking = false; // reset logic guard
         document.body.classList.add('call-mode');
         document.getElementById("callOverlay").style.display = "flex";
         
-        // Force the 3D canvas to resize to the new massive layout
         setTimeout(() => {
             const container = document.getElementById('canvas-container');
             const newRect = container.getBoundingClientRect();
             renderer.setSize(newRect.width, newRect.height);
             camera.aspect = newRect.width / newRect.height;
             camera.updateProjectionMatrix();
-        }, 500); // Wait for CSS transition to finish
+        }, 500); 
 
         logDebug("success", "[CALL] Connection established.");
-        
-        // Kick off the permanent microphone listener
         initContinuousSpeechRecognition();
     }
 
     function endCall() {
         isCallActive = false;
+        botIsTalking = false; 
         document.body.classList.remove('call-mode');
         document.getElementById("callOverlay").style.display = "none";
         
         window.speechSynthesis.cancel();
         if (recognition) {
-            recognition.onend = null; // Stop it from auto-restarting
             recognition.stop();
         }
         
         clearTimeout(silenceTimer);
         document.getElementById('liveTranscript').innerText = "";
         
-        // Resize canvas back to normal
+        // Strip hardcoded inline styles so the canvas flexes back down gracefully
+        renderer.domElement.style.width = '100%';
+        renderer.domElement.style.height = '100%';
+
         setTimeout(() => {
             const container = document.getElementById('canvas-container');
             const newRect = container.getBoundingClientRect();
@@ -355,11 +346,12 @@
 
 
     // ==========================================
-    // 3. CONTINUOUS VAD (VOICE ACTIVITY DETECTION)
+    // 3. CONTINUOUS VAD & MIC LOCKS
     // ==========================================
     let recognition = null;
     let silenceTimer = null;
     let finalTranscript = '';
+    let botIsTalking = false; 
 
     function initContinuousSpeechRecognition() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -371,24 +363,21 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
         
-        // For continuous monitoring without asking for permissions repeatedly, 
-        // we use continuous=true and handle the silence ourselves.
         recognition.continuous = true; 
         recognition.interimResults = true;
         recognition.lang = 'ka-GE'; 
 
         recognition.onstart = function() {
-            document.getElementById('callStatus').innerText = "LISTENING";
-            document.getElementById('callStatus').style.color = "var(--accent)";
+            if (!botIsTalking && isCallActive) {
+                document.getElementById('callStatus').innerText = "LISTENING";
+                document.getElementById('callStatus').style.color = "var(--accent)";
+            }
         };
 
         recognition.onresult = function(event) {
-            // Instantly stop the bot from speaking if you interrupt it
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
-            }
+            if (botIsTalking) return; // ignore mic bleed if bot is speaking
 
-            clearTimeout(silenceTimer); // Reset silence countdown
+            clearTimeout(silenceTimer); 
             
             let interim = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -398,13 +387,12 @@
             
             document.getElementById('liveTranscript').innerText = finalTranscript + interim;
 
-            // Silence Detection: 1.5 seconds of no new words = process the speech
             silenceTimer = setTimeout(() => {
                 if (finalTranscript.trim() !== "" || interim.trim() !== "") {
                     let userMsg = finalTranscript + interim;
                     logDebug("user-query", `[MIC] ${userMsg}`);
                     
-                    finalTranscript = ''; // Reset for next batch
+                    finalTranscript = ''; 
                     document.getElementById('liveTranscript').innerText = "...";
                     
                     triggerCallResponse(userMsg);
@@ -417,9 +405,7 @@
         };
 
         recognition.onend = function() {
-            // The browser sometimes stops recognition automatically.
-            // If the call is still active, instantly restart it silently.
-            if (isCallActive) {
+            if (isCallActive && !botIsTalking) {
                 try { recognition.start(); } catch(e) {}
             }
         };
@@ -428,12 +414,14 @@
     }
 
     function triggerCallResponse(userText) {
+        botIsTalking = true;
+        try { recognition.stop(); } catch(e) {}
+
         document.getElementById('callStatus').innerText = "THINKING...";
         document.getElementById('callStatus').style.color = "#f59e0b";
         
         appendMessage(userText, 'user');
         
-        // Slight delay to feel natural
         setTimeout(() => {
             const response = processNLP(userText);
             appendMessage(response, 'bot');
@@ -459,10 +447,13 @@
         
         msg.onend = msg.onerror = () => { 
             is3DSpeaking = false; stop3DLipSync(); 
+            botIsTalking = false;
+            
             if(isCallActive) {
                 document.getElementById('callStatus').innerText = "LISTENING";
                 document.getElementById('callStatus').style.color = "var(--accent)";
                 document.getElementById('liveTranscript').innerText = "";
+                try { recognition.start(); } catch(e) {} 
             }
         };
         
@@ -597,6 +588,7 @@
             let currentWord = starts[Math.floor(Math.random() * starts.length)];
             if (!currentWord) currentWord = "prosta";
             result.push(currentWord);
+
             let maxLen = Math.floor(Math.random() * 6) + 3;
 
             for(let i = 1; i < maxLen; i++) {
@@ -623,7 +615,7 @@
 
     function searchCorpusByIntent(inputTokens) {
         let bestMatch = ""; let maxScore = 0;
-        corpus = rawCorpus; // ensure variable exists
+        let corpus = rawCorpus; 
         corpus.forEach(sentence => {
             let score = 0; let sentenceTokens = sentence.toLowerCase().split(/\s+/);
             inputTokens.forEach(token => { if(token.length > 2 && sentenceTokens.includes(token)) score++; });
@@ -658,16 +650,9 @@
     // ==========================================
     // 5. STANDARD CHAT UI INTEGRATION
     // ==========================================
-    function logDebug(type, text) {
-        const logBox = document.getElementById("debugLog");
-        logBox.innerHTML += `<span class="${type}">${text}</span><br>`;
-        logBox.scrollTop = logBox.scrollHeight;
-    }
-
     function updateUI() {
         document.getElementById("tempDisp").innerText = document.getElementById("tempSlider").value;
         const spinVal = parseFloat(document.getElementById("spinSlider").value);
-        document.getElementById("spinDisp").innerText = spinVal.toFixed(1);
         if (controls) controls.autoRotateSpeed = spinVal;
     }
 
@@ -689,7 +674,6 @@
             const response = processNLP(text);
             appendMessage(response, 'bot');
             
-            // If we are NOT in a call, play standard audio
             if(!isCallActive) {
                 window.speechSynthesis.cancel(); 
                 let cleanText = response.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
