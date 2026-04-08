@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.3.0 - UI & Stability Patch</title>
+    <title>DimJiPiTi v3.3.2 - Audio Patch</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -60,7 +60,7 @@
             text-shadow: 2px 2px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0px 0px 15px var(--accent);
             z-index: 20;
             pointer-events: none;
-            display: none; /* Hidden by default */
+            display: none; 
             line-height: 1.2;
         }
 
@@ -71,6 +71,9 @@
         .slider-row span { color: var(--accent); }
         input[type="range"] { flex-grow: 1; margin: 0 10px; cursor: pointer; accent-color: var(--accent); }
         
+        .btn-toggle { background-color: rgba(0, 255, 65, 0.1); color: var(--accent); border: 1px solid var(--accent); padding: 12px; font-family: 'Menlo', monospace; font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s; width: 100%;}
+        .btn-toggle.off { background-color: rgba(255, 51, 102, 0.1); color: var(--alert); border: 1px solid var(--alert); }
+
         /* CENTER COL: Chat */
         .chat-col { display: flex; flex-direction: column; background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;}
         .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth;}
@@ -104,10 +107,10 @@
         /* ========================================= */
         .call-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--call-bg); z-index: 100; /* High z-index */
+            background-color: var(--call-bg); z-index: 100;
             display: none; flex-direction: column; align-items: center; justify-content: flex-end;
             border-radius: 12px; backdrop-filter: blur(10px); padding-bottom: 50px;
-            pointer-events: auto; /* Let clicks hit buttons inside */
+            pointer-events: auto; 
         }
         
         .call-status { font-size: 1.2rem; font-weight: bold; color: var(--accent); letter-spacing: 4px; margin-bottom: 30px; text-transform: uppercase;}
@@ -120,14 +123,9 @@
         body.call-mode .settings-panel, body.call-mode .chat-col, body.call-mode .log-col { opacity: 0; pointer-events: none; display: none;}
         body.call-mode .main-grid { display: flex; justify-content: center; align-items: center; }
         
-        /* Disable pointer events on the left-col so we can click the end call button through it */
         body.call-mode .left-col { width: 100%; max-width: 650px; align-items: center; justify-content: center; margin-bottom: 120px; z-index: 101; pointer-events: none;}
         body.call-mode .visual-stage { width: 100%; background: transparent; border: none; box-shadow: none; pointer-events: none;}
-        
-        /* But keep the 3D canvas interactive if needed */
         body.call-mode #canvas-container { border-radius: 50%; box-shadow: 0 0 50px rgba(0, 255, 65, 0.2); border: 2px solid rgba(0, 255, 65, 0.3); pointer-events: auto;}
-        
-        /* Show the transcript layer */
         body.call-mode .live-transcript { display: block; }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -140,7 +138,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.3.0 / UI & Stability Patch</div>
+        <div class="subtitle">v3.3.2 / Audio Patch Applied</div>
     </div>
 
     <div class="main-grid">
@@ -158,11 +156,12 @@
                     <input type="range" id="tempSlider" min="0.1" max="1.0" step="0.1" value="0.7" oninput="updateUI()">
                 </div>
             </div>
+            <button class="btn-toggle" id="audioToggle" onclick="toggleAudio()">🔊 AUDIO: ON</button>
         </div>
 
         <div class="chat-col">
             <div class="chat-history" id="chatHistory">
-                <div class="msg bot">System Initialized. Mic connection secured. Ras shvebi?</div>
+                <div class="msg bot">System Initialized. Audio pre-loaded. Ras shvebi?</div>
             </div>
             <div class="typing-indicator" id="typingIndicator">DimJiPiTi is typing...</div>
             <div class="chat-input-area">
@@ -176,7 +175,7 @@
 
         <div class="log-col" id="debugLog">
             <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
-            <span class="info">[SYSTEM] Z-Index UI fixes applied...</span><br>
+            <span class="info">[SYSTEM] Audio drivers pre-fetched...</span><br>
             <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
     </div>
@@ -188,6 +187,35 @@
 </div>
 
 <script>
+    // ==========================================
+    // 0. AUDIO STATE & TOGGLE
+    // ==========================================
+    let audioEnabled = true;
+
+    function toggleAudio() {
+        audioEnabled = !audioEnabled;
+        const btn = document.getElementById("audioToggle");
+        if (audioEnabled) {
+            btn.className = "btn-toggle"; 
+            btn.innerText = "🔊 AUDIO: ON"; 
+        } else {
+            btn.className = "btn-toggle off"; 
+            btn.innerText = "🔇 AUDIO: OFF"; 
+            window.speechSynthesis.cancel(); 
+            is3DSpeaking = false; 
+            stop3DLipSync();
+        }
+    }
+
+    // Force browser to load voices aggressively on page load
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+            logDebug("success", "[AUDIO] Voice packs synced.");
+        };
+    }
+
     // ==========================================
     // 1. 3D RENDER ENGINE & HEAD TRACKING
     // ==========================================
@@ -292,6 +320,7 @@
     let isCallActive = false;
 
     function playDialTone() {
+        if (!audioEnabled) return;
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         const osc1 = audioCtx.createOscillator();
@@ -367,7 +396,7 @@
         
         window.speechSynthesis.cancel();
         if (recognition) {
-            recognition.onend = null; // Kill auto-restart
+            recognition.onend = null; 
             try { recognition.stop(); } catch(e){}
         }
         
@@ -397,7 +426,6 @@
     let finalTranscript = '';
     let botIsTalking = false; 
     
-    // Recovery system for tab switching
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
             if (isCallActive && !botIsTalking && recognition) {
@@ -465,7 +493,6 @@
         };
 
         recognition.onend = function() {
-            // Heartbeat patch: 300ms delay to prevent loop freezing
             if (isCallActive && !botIsTalking && document.visibilityState === "visible") {
                 setTimeout(() => {
                     try { recognition.start(); } catch(e) {}
@@ -492,7 +519,20 @@
             document.getElementById('callStatus').innerText = "SPEAKING";
             document.getElementById('liveTranscript').innerText = response;
             
-            playCallTTS(response);
+            if (audioEnabled) {
+                playCallTTS(response);
+            } else {
+                // If muted, just simulate the processing delay
+                setTimeout(() => {
+                    botIsTalking = false;
+                    if(isCallActive) {
+                        document.getElementById('callStatus').innerText = "LISTENING";
+                        document.getElementById('callStatus').style.color = "var(--accent)";
+                        document.getElementById('liveTranscript').innerText = "";
+                        try { recognition.start(); } catch(e) {} 
+                    }
+                }, 2000);
+            }
         }, 600); 
     }
 
@@ -503,8 +543,17 @@
         msg.pitch = 0.65; msg.rate = 0.8; 
         
         let voices = window.speechSynthesis.getVoices();
-        let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
-        if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+        
+        // Robust voice selection algorithm
+        let selectedVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it')) 
+                         || voices.find(v => v.lang.includes('it')) 
+                         || voices.find(v => v.name.includes('Google UK English Male'))
+                         || voices.find(v => v.name.includes('Male'))
+                         || voices[0];
+                         
+        if (selectedVoice) {
+            msg.voice = selectedVoice;
+        }
 
         msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
         
@@ -516,11 +565,7 @@
                 document.getElementById('callStatus').innerText = "LISTENING";
                 document.getElementById('callStatus').style.color = "var(--accent)";
                 document.getElementById('liveTranscript').innerText = "";
-                
-                // Heartbeat to restart
-                setTimeout(() => {
-                    try { recognition.start(); } catch(e) {} 
-                }, 300);
+                try { recognition.start(); } catch(e) {} 
             }
         };
         
@@ -550,8 +595,8 @@
         "amis fishka isaa tan ro martivad chasatvirti saitia", "imena sheni ideis pontia", 
         "einaris restoranshi mivdivar saqmian shexvedraze", "PLIAJZE VAAAAAAAR", "pliajze var", 
         "egre vibazreb amieridan", "gushin mwers vici teona vinc ario", "xo anu saxeli saidan prosta",
-        "imedis gmirebi gavxdet", "shevacherot sanam droa gavacherot", "nata2is shansi ari?", 
-        "da ras fiqrob", "mara agar vutxari arapeir", "bijo lobom ro miwera manaxa eg mec", 
+        "imedis gmirebi gavxdet", "shevacherot sanam droa gavacherot", "pontis shansi ari?", 
+        "da ras fiqrob", "mara agar vutxari arapeir", "bijo gvenjom ro miwera manaxa eg mec", 
         "piriqit dzmaaa zustad", "fotosesia davjavshnot 😇😇", "cvetshiii", "shuzoidi israelisti", 
         "wamayile am rojas", "wamiyvane cminda micaze 🙏🙏", "shen gaq eseti turebi?", 
         "kochli darchebi 🥺🥺🥺 tore gaggijebs", "ro ar amodzrao daifiqsire ramit", 
@@ -580,7 +625,7 @@
         "lmfao ravi sasacilo iyo kipatastan agar vart ogondp", "ki magati deda movtyan da mere me da kote amovalt", 
         "tesli ideaa 7 mand viqnebit", "me davamtavre momiloce ra fuli baratze gvaq yvelas",
         "mara dzbenis processhi mainc didebi vipove auuu ver vipove", "da sisqreshi 10", 
-        "imena gvagulaeben iqqnbian wamo registrir", "damolesteba pirvelad davserche vaime ar vicodi ro marto bavshvebze itqmeboda", 
+        "imena gvagulaeben iqqnbian wamo registrir", "damolesteba pirvelad davserche vaime", 
         "gamovylevdebi mand ro gavicno martla vinme", "au davregistrirde magaze mirchev? wadiiiii", 
         "jer shesvlaze mere tualetze mere sasmelze", "es ar aris orgia dzmebi gulaoben",
         "kachistan ertad shevchamdi beat vinmes", "120 bpmshi ro ajgarunot 😇😇", "rs gulaoobs dges ar gaq? 😈😈",
@@ -613,7 +658,7 @@
         "vigaca dadis heluinio iq gei paradio mixmeba suli", "au lardayinebis filmis scenari ro maq exa gamaxsenda",
         "da metqi telefoni gavtexe vaime da daimsxvra mtvralma telefoni chavkbiche", "dagxvirtavt tqveni dagxvritavs yvelas",
         "internetma gamicheda mixeil dzagnidze mixshobs internets GEI FIQREBI GEI FIQREBI O ARAAAA GATISHET ES GEI SIGNALEBI",
-        "ai eSAAA AAE)#)R)#)#)#) davuconnectdebi", "romelic afilirebulia biznesmen mixeil dzagnidzestan romelic arvici vinaa THE RABBITHOLE GOES DEEP BROOO AAEEE",
+        "ai eSAAA AAE)#)R)#)#)#) davuconnectdebi", "romelic afilirebulia biznesmen glaxo asketurze romelic arvici vinaa THE RABBITHOLE GOES DEEP BROOO AAEEE",
         "shps neocitylight yvelas qocs edzaxis ra avadmyofi rojaa", "mivxvdio igulismxma aaa memgoni ogilizma Rodis unda momeyola?", 
         "skolasji ro zixar da koshmarebi geqneba imena sashushua", "auuu chemi dedaaa movktan pirshi nu mattuebt", 
         "ra yleobaa ise magxeka yle", "elephant ragav erqva", "sait ariaan chemi birja shoria tavaxmellla", 
@@ -621,7 +666,7 @@
     ];
 
     const fallbackConnectors = ["prosta", "anu", "xoda", "mara", "imena", "tan", "magito", "da", "ise vafshe"];
-    const emojis = [" 😡", " 😈", " 🤔", " 🥰", " 😑", " 😂", " 💀", " 🦇", " 🥶", " 😇", " 🥺", " :DDD"];
+    const emojis = [" 😡", " 😈",  " 🥰", " 🖕", " 😂", " 💀", " 😇", " 🥺", " :DDD"];
 
     let uniGramDict = {}; let biGramDict = {}; let starts = [];
 
@@ -747,14 +792,22 @@
             const response = processNLP(text);
             appendMessage(response, 'bot');
             
-            if(!isCallActive) {
+            if(!isCallActive && audioEnabled) {
                 window.speechSynthesis.cancel(); 
                 let cleanText = response.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
                 let msg = new SpeechSynthesisUtterance(cleanText);
                 msg.pitch = 0.65; msg.rate = 0.8; 
+                
                 let voices = window.speechSynthesis.getVoices();
-                let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
-                if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+                let selectedVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it')) 
+                                 || voices.find(v => v.lang.includes('it')) 
+                                 || voices.find(v => v.name.includes('Google UK English Male'))
+                                 || voices.find(v => v.name.includes('Male'))
+                                 || voices[0];
+                if (selectedVoice) {
+                    msg.voice = selectedVoice;
+                }
+                
                 msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
                 msg.onend = msg.onerror = () => { is3DSpeaking = false; stop3DLipSync(); };
                 window.speechSynthesis.speak(msg);
