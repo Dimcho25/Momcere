@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.1.1 - Voice Patch</title>
+    <title>DimJiPiTi v3.1.2 - Mic Patch</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -66,6 +66,7 @@
         
         .btn-call { background-color: rgba(0, 255, 65, 0.15); color: var(--accent); border: 1px solid var(--accent); padding: 15px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;}
         .btn-call:hover { background-color: rgba(0, 255, 65, 0.3); }
+        .btn-call:disabled { background-color: #222; color: #555; border-color: #333; cursor: not-allowed; }
 
         /* RIGHT COL: Debug/Engine Log */
         .log-col { background-color: #000; border: 1px solid var(--border); padding: 15px; border-radius: 8px; overflow-y: auto; font-size: 0.75rem; line-height: 1.4; color: #a1a1aa; font-family: monospace; transition: all 0.3s;}
@@ -73,6 +74,7 @@
         .log-col span.warn { color: #f59e0b; }
         .log-col span.success { color: var(--accent); }
         .log-col span.user-query { color: #ec4899; }
+        .log-col span.alert { color: var(--alert); font-weight: bold; }
 
         /* ========================================= */
         /* CALL OVERLAY UI */
@@ -110,7 +112,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.1.1 / Voice Patch Applied</div>
+        <div class="subtitle">v3.1.2 / Mic Permission Patch</div>
     </div>
 
     <div class="main-grid">
@@ -145,7 +147,7 @@
 
         <div class="log-col" id="debugLog">
             <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
-            <span class="info">[SYSTEM] Continuous VAD algorithm loaded...</span><br>
+            <span class="info">[SYSTEM] Awaiting Mic Permissions...</span><br>
             <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
     </div>
@@ -256,7 +258,7 @@
     }
 
     // ==========================================
-    // 2. THE DIAL TONE & CALL SEQUENCE
+    // 2. THE DIAL TONE & CALL SEQUENCE (MIC PATCHED)
     // ==========================================
     let audioCtx = null;
     let isCallActive = false;
@@ -285,21 +287,37 @@
 
     function initiateCallSequence() {
         const btn = document.getElementById("initCallBtn");
-        btn.innerText = "DIALING...";
+        btn.innerText = "REQUESTING MIC...";
         btn.disabled = true;
 
-        playDialTone();
+        // Force browser to ask for mic permission immediately upon click
+        navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+            logDebug("success", "[SYSTEM] Microphone permission granted.");
+            
+            // Clean up the raw stream, SpeechRecognition will grab its own
+            stream.getTracks().forEach(track => track.stop());
 
-        setTimeout(() => {
+            btn.innerText = "DIALING...";
+            playDialTone();
+
+            setTimeout(() => {
+                btn.innerText = "📞 CALL DIMJIPITI";
+                btn.disabled = false;
+                enterCallMode();
+            }, 2000);
+        })
+        .catch(function(err) {
+            logDebug("alert", "[SYSTEM] Microphone permission denied. " + err.message);
             btn.innerText = "📞 CALL DIMJIPITI";
             btn.disabled = false;
-            enterCallMode();
-        }, 2000);
+            alert("You must allow microphone permissions to call DimJiPiTi.");
+        });
     }
 
     function enterCallMode() {
         isCallActive = true;
-        botIsTalking = false; // reset logic guard
+        botIsTalking = false; 
         document.body.classList.add('call-mode');
         document.getElementById("callOverlay").style.display = "flex";
         
@@ -323,13 +341,13 @@
         
         window.speechSynthesis.cancel();
         if (recognition) {
-            recognition.stop();
+            recognition.onend = null; // Kill auto-restart
+            try { recognition.stop(); } catch(e){}
         }
         
         clearTimeout(silenceTimer);
         document.getElementById('liveTranscript').innerText = "";
         
-        // Strip hardcoded inline styles so the canvas flexes back down gracefully
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
 
@@ -371,11 +389,12 @@
             if (!botIsTalking && isCallActive) {
                 document.getElementById('callStatus').innerText = "LISTENING";
                 document.getElementById('callStatus').style.color = "var(--accent)";
+                logDebug("info", "[MIC] Speech recognition active.");
             }
         };
 
         recognition.onresult = function(event) {
-            if (botIsTalking) return; // ignore mic bleed if bot is speaking
+            if (botIsTalking) return; 
 
             clearTimeout(silenceTimer); 
             
@@ -410,7 +429,7 @@
             }
         };
 
-        try { recognition.start(); } catch(e) {}
+        try { recognition.start(); } catch(e) { logDebug("alert", "Mic start failed: " + e.message); }
     }
 
     function triggerCallResponse(userText) {
@@ -650,6 +669,12 @@
     // ==========================================
     // 5. STANDARD CHAT UI INTEGRATION
     // ==========================================
+    function logDebug(type, text) {
+        const logBox = document.getElementById("debugLog");
+        logBox.innerHTML += `<span class="${type}">${text}</span><br>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
     function updateUI() {
         document.getElementById("tempDisp").innerText = document.getElementById("tempSlider").value;
         const spinVal = parseFloat(document.getElementById("spinSlider").value);
