@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.1.2 - Mic Patch</title>
+    <title>DimJiPiTi v3.2.0 - Stability Patch</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -31,8 +31,8 @@
         .main-grid { display: grid; grid-template-columns: 350px 1fr 300px; gap: 15px; flex-grow: 1; min-height: 0; transition: all 0.5s ease-in-out;}
 
         /* LEFT COL: 3D + Settings */
-        .left-col { display: flex; flex-direction: column; gap: 15px; z-index: 10;}
-        .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease-in-out;}
+        .left-col { display: flex; flex-direction: column; gap: 15px; z-index: 10; align-items: center;}
+        .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease-in-out; width: 100%;}
         
         #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab; transition: all 0.5s ease-in-out; overflow: hidden;}
         #canvas-container canvas { width: 100% !important; height: 100% !important; object-fit: cover; }
@@ -41,13 +41,17 @@
         #loading-text { position: absolute; color: var(--accent); font-weight: bold; animation: pulse 1.5s infinite; pointer-events: none;}
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-        .settings-panel { background-color: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s;}
+        /* LIVE TRANSCRIPT (Moved to sit right under the 3D face) */
+        .live-transcript { width: 100%; text-align: center; min-height: 80px; color: var(--text); font-size: 1.5rem; font-style: italic; opacity: 0; margin-top: 10px; line-height: 1.4; display: none; transition: opacity 0.3s;}
+
+        .settings-panel { background-color: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s; width: 100%; box-sizing: border-box;}
         .settings-header { color: #71717a; font-size: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; font-weight: bold; letter-spacing: 1px;}
         .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;}
         .slider-row label { font-weight: bold; color: var(--text); min-width: 120px;}
         .slider-row span { color: var(--accent); }
         input[type="range"] { flex-grow: 1; margin: 0 10px; cursor: pointer; accent-color: var(--accent); }
-        
+        select.lang-select { width: 100%; padding: 8px; font-family: 'Menlo', monospace; background-color: #050505; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; margin-top: 5px; font-size: 0.85rem;}
+
         /* CENTER COL: Chat */
         .chat-col { display: flex; flex-direction: column; background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;}
         .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth;}
@@ -82,25 +86,24 @@
         .call-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--call-bg); z-index: 5;
-            display: none; flex-direction: column; align-items: center; justify-content: flex-end;
-            border-radius: 12px; backdrop-filter: blur(10px); padding-bottom: 50px;
+            display: none; flex-direction: column; align-items: center; justify-content: space-between;
+            border-radius: 12px; backdrop-filter: blur(10px); padding: 40px 0; box-sizing: border-box;
         }
         
-        .call-status { font-size: 1.2rem; font-weight: bold; color: var(--accent); letter-spacing: 4px; margin-bottom: 30px; text-transform: uppercase;}
-        
-        .live-transcript { width: 60%; text-align: center; min-height: 80px; color: var(--text); font-size: 1.4rem; font-style: italic; opacity: 0.8; margin-bottom: 30px; line-height: 1.4;}
+        .call-status { font-size: 1.2rem; font-weight: bold; color: var(--accent); letter-spacing: 4px; text-transform: uppercase;}
 
-        .btn-end-call { background-color: var(--alert); color: #fff; border: none; padding: 15px 40px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1.2rem; border-radius: 30px; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 102, 0.4);}
+        .btn-end-call { background-color: var(--alert); color: #fff; border: none; padding: 15px 40px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1.2rem; border-radius: 30px; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 102, 0.4); z-index: 20;}
         .btn-end-call:hover { background-color: #ff0033; transform: scale(1.05);}
 
         /* CALL MODE STATE CLASSES */
         body.call-mode .header { opacity: 0; pointer-events: none; height: 0; margin: 0; }
         body.call-mode .settings-panel, body.call-mode .chat-col, body.call-mode .log-col { opacity: 0; pointer-events: none; display: none;}
-        body.call-mode .main-grid { display: flex; justify-content: center; align-items: center; }
+        body.call-mode .main-grid { display: flex; justify-content: center; align-items: center; z-index: 10;}
         
-        body.call-mode .left-col { width: 100%; max-width: 600px; align-items: center; justify-content: center; margin-bottom: 150px; z-index: 10;}
+        body.call-mode .left-col { width: 100%; max-width: 650px; align-items: center; justify-content: center; margin-bottom: 0; z-index: 10;}
         body.call-mode .visual-stage { width: 100%; background: transparent; border: none; box-shadow: none; }
         body.call-mode #canvas-container { border-radius: 50%; box-shadow: 0 0 50px rgba(0, 255, 65, 0.2); border: 2px solid rgba(0, 255, 65, 0.3);}
+        body.call-mode .live-transcript { display: block; opacity: 0.9; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
@@ -112,7 +115,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.1.2 / Mic Permission Patch</div>
+        <div class="subtitle">v3.2.0 / Heartbeat Patch</div>
     </div>
 
     <div class="main-grid">
@@ -121,19 +124,24 @@
                 <div id="canvas-container"></div>
                 <div id="loading-text">MOUNTING MESH...</div>
             </div>
+            <div class="live-transcript" id="liveTranscript"></div>
             
             <div class="settings-panel">
-                <div class="settings-header">SCRAMBLER TUNING</div>
+                <div class="settings-header">ENGINE TUNING</div>
                 <div class="slider-row">
-                    <label title="Low: Accurate. High: Chaotic.">CHAOS (TEMP): <span id="tempDisp">0.7</span></label>
+                    <label>CHAOS (TEMP): <span id="tempDisp">0.7</span></label>
                     <input type="range" id="tempSlider" min="0.1" max="1.0" step="0.1" value="0.7" oninput="updateUI()">
                 </div>
+                <select class="lang-select" id="micLang" onchange="updateMicLang()">
+                    <option value="ka-GE" selected>MIC: Georgian (ka-GE)</option>
+                    <option value="en-US">MIC: English (en-US)</option>
+                </select>
             </div>
         </div>
 
         <div class="chat-col">
             <div class="chat-history" id="chatHistory">
-                <div class="msg bot">System Initialized. Text me or call me. Ras shvebi?</div>
+                <div class="msg bot">System Initialized. Mic heartbeat patched. Ras shvebi?</div>
             </div>
             <div class="typing-indicator" id="typingIndicator">DimJiPiTi is typing...</div>
             <div class="chat-input-area">
@@ -147,14 +155,13 @@
 
         <div class="log-col" id="debugLog">
             <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
-            <span class="info">[SYSTEM] Awaiting Mic Permissions...</span><br>
+            <span class="info">[SYSTEM] VAD Hearbeat active...</span><br>
             <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
     </div>
 
     <div class="call-overlay" id="callOverlay">
         <div class="call-status" id="callStatus">CONNECTING...</div>
-        <div class="live-transcript" id="liveTranscript"></div>
         <button class="btn-end-call" onclick="endCall()">END CALL</button>
     </div>
 </div>
@@ -258,7 +265,7 @@
     }
 
     // ==========================================
-    // 2. THE DIAL TONE & CALL SEQUENCE (MIC PATCHED)
+    // 2. THE DIAL TONE & CALL SEQUENCE
     // ==========================================
     let audioCtx = null;
     let isCallActive = false;
@@ -290,12 +297,9 @@
         btn.innerText = "REQUESTING MIC...";
         btn.disabled = true;
 
-        // Force browser to ask for mic permission immediately upon click
         navigator.mediaDevices.getUserMedia({ audio: true })
         .then(function(stream) {
             logDebug("success", "[SYSTEM] Microphone permission granted.");
-            
-            // Clean up the raw stream, SpeechRecognition will grab its own
             stream.getTracks().forEach(track => track.stop());
 
             btn.innerText = "DIALING...";
@@ -308,7 +312,7 @@
             }, 2000);
         })
         .catch(function(err) {
-            logDebug("alert", "[SYSTEM] Microphone permission denied. " + err.message);
+            logDebug("alert", "[SYSTEM] Mic permission denied. " + err.message);
             btn.innerText = "📞 CALL DIMJIPITI";
             btn.disabled = false;
             alert("You must allow microphone permissions to call DimJiPiTi.");
@@ -341,7 +345,7 @@
         
         window.speechSynthesis.cancel();
         if (recognition) {
-            recognition.onend = null; // Kill auto-restart
+            recognition.onend = null; 
             try { recognition.stop(); } catch(e){}
         }
         
@@ -364,12 +368,19 @@
 
 
     // ==========================================
-    // 3. CONTINUOUS VAD & MIC LOCKS
+    // 3. CONTINUOUS VAD (HEARTBEAT PATCHED)
     // ==========================================
     let recognition = null;
     let silenceTimer = null;
     let finalTranscript = '';
     let botIsTalking = false; 
+    let currentLang = 'ka-GE';
+
+    function updateMicLang() {
+        currentLang = document.getElementById("micLang").value;
+        if (recognition) recognition.lang = currentLang;
+        logDebug("info", "Mic language set to " + currentLang);
+    }
 
     function initContinuousSpeechRecognition() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -383,13 +394,13 @@
         
         recognition.continuous = true; 
         recognition.interimResults = true;
-        recognition.lang = 'ka-GE'; 
+        recognition.lang = currentLang; 
 
         recognition.onstart = function() {
             if (!botIsTalking && isCallActive) {
                 document.getElementById('callStatus').innerText = "LISTENING";
                 document.getElementById('callStatus').style.color = "var(--accent)";
-                logDebug("info", "[MIC] Speech recognition active.");
+                logDebug("info", "[MIC] Connection active.");
             }
         };
 
@@ -413,7 +424,6 @@
                     
                     finalTranscript = ''; 
                     document.getElementById('liveTranscript').innerText = "...";
-                    
                     triggerCallResponse(userMsg);
                 }
             }, 1500); 
@@ -425,7 +435,10 @@
 
         recognition.onend = function() {
             if (isCallActive && !botIsTalking) {
-                try { recognition.start(); } catch(e) {}
+                // THE HEARTBEAT PATCH: 300ms delay prevents browser from locking the API loop
+                setTimeout(() => {
+                    try { recognition.start(); } catch(e) {}
+                }, 300);
             }
         };
 
@@ -472,7 +485,11 @@
                 document.getElementById('callStatus').innerText = "LISTENING";
                 document.getElementById('callStatus').style.color = "var(--accent)";
                 document.getElementById('liveTranscript').innerText = "";
-                try { recognition.start(); } catch(e) {} 
+                
+                // Restart mic after speaking with heartbeat delay
+                setTimeout(() => {
+                    try { recognition.start(); } catch(e) {} 
+                }, 300);
             }
         };
         
@@ -699,18 +716,17 @@
             const response = processNLP(text);
             appendMessage(response, 'bot');
             
-            if(!isCallActive) {
-                window.speechSynthesis.cancel(); 
-                let cleanText = response.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.pitch = 0.65; msg.rate = 0.8; 
-                let voices = window.speechSynthesis.getVoices();
-                let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
-                if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
-                msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
-                msg.onend = msg.onerror = () => { is3DSpeaking = false; stop3DLipSync(); };
-                window.speechSynthesis.speak(msg);
-            }
+            // Standard TTS call without modifying Voice Recognition logic
+            window.speechSynthesis.cancel(); 
+            let cleanText = response.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+            let msg = new SpeechSynthesisUtterance(cleanText);
+            msg.pitch = 0.65; msg.rate = 0.8; 
+            let voices = window.speechSynthesis.getVoices();
+            let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
+            if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+            msg.onstart = () => { is3DSpeaking = true; start3DLipSync(); };
+            msg.onend = msg.onerror = () => { is3DSpeaking = false; stop3DLipSync(); };
+            window.speechSynthesis.speak(msg);
             
             const chatHistory = document.getElementById("chatHistory");
             chatHistory.scrollTop = chatHistory.scrollHeight;
