@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DimJiPiTi v2.0.0 - Neural Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg: #030303;
+            --card: #0a0a0c;
+            --text: #e4e4e7;
+            --accent: #00FF41; 
+            --alert: #FF3366;  
+            --border: #27272a;
+            --user-msg: #1a1a1a;
+            --bot-msg: #003311;
+        }
+
+        body { background-color: var(--bg); color: var(--text); font-family: 'Menlo', 'Courier New', monospace; margin: 0; padding: 15px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; overflow: hidden;}
+        .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; height: 100%; }
+        
+        .header { text-align: center; margin-bottom: 10px; flex-shrink: 0;}
+        .title { font-size: 2.4rem; font-weight: bold; color: var(--text); margin: 0; letter-spacing: 2px;}
+        .title span { color: var(--accent); }
+        .subtitle { font-size: 0.85rem; font-weight: bold; color: #71717a; margin-top: 2px; letter-spacing: 4px; text-transform: uppercase;}
+
+        .main-grid { display: grid; grid-template-columns: 350px 1fr 300px; gap: 15px; flex-grow: 1; min-height: 0; }
+
+        /* LEFT COL: 3D + Settings */
+        .left-col { display: flex; flex-direction: column; gap: 15px; }
+        .visual-stage { background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; position: relative; display: flex; align-items: center; justify-content: center;}
+        #canvas-container { width: 100%; aspect-ratio: 1/1; background-color: #050505; border-radius: 6px; border: 1px solid var(--border); cursor: grab;}
+        #canvas-container:active { cursor: grabbing; }
+        #loading-text { position: absolute; color: var(--accent); font-weight: bold; animation: pulse 1.5s infinite; pointer-events: none;}
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .settings-panel { background-color: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px;}
+        .settings-header { color: #71717a; font-size: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; font-weight: bold; letter-spacing: 1px;}
+        .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;}
+        .slider-row label { font-weight: bold; color: var(--text); min-width: 120px;}
+        .slider-row span { color: var(--accent); }
+        input[type="range"] { flex-grow: 1; margin: 0 10px; cursor: pointer; accent-color: var(--accent); }
+        
+        .btn-toggle { background-color: rgba(0, 255, 65, 0.1); color: var(--accent); border: 1px solid var(--accent); padding: 12px; font-family: 'Menlo', monospace; font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s; width: 100%;}
+        .btn-toggle.off { background-color: rgba(255, 51, 102, 0.1); color: var(--alert); border: 1px solid var(--alert); }
+
+        /* CENTER COL: Chat */
+        .chat-col { display: flex; flex-direction: column; background-color: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; font-size: 0.95rem; word-wrap: break-word;}
+        .msg.user { align-self: flex-end; background-color: var(--user-msg); border: 1px solid var(--border); border-bottom-right-radius: 2px;}
+        .msg.bot { align-self: flex-start; background-color: var(--bot-msg); border: 1px solid var(--accent); color: var(--accent); border-bottom-left-radius: 2px;}
+        .typing-indicator { align-self: flex-start; color: var(--accent); font-size: 0.85rem; font-style: italic; display: none; padding-left: 10px;}
+
+        .chat-input-area { display: flex; padding: 15px; background-color: #050505; border-top: 1px solid var(--border); gap: 10px;}
+        .chat-input { flex-grow: 1; background-color: var(--card); border: 1px solid var(--border); padding: 15px; color: var(--text); font-family: 'Menlo', monospace; border-radius: 6px; font-size: 1rem;}
+        .chat-input:focus { outline: none; border-color: var(--accent); }
+        .btn-send { background-color: var(--accent); color: #000; border: none; padding: 0 30px; font-family: 'Menlo', monospace; font-weight: bold; font-size: 1.1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;}
+        .btn-send:hover { background-color: #00cc33; }
+
+        /* RIGHT COL: Debug/Engine Log */
+        .log-col { background-color: #000; border: 1px solid var(--border); padding: 15px; border-radius: 8px; overflow-y: auto; font-size: 0.75rem; line-height: 1.4; color: #a1a1aa; font-family: monospace;}
+        .log-col span.info { color: #3b82f6; }
+        .log-col span.warn { color: #f59e0b; }
+        .log-col span.success { color: var(--accent); }
+        .log-col span.user-query { color: #ec4899; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 class="title">Dim<span>JiPiTi</span></h1>
+        <div class="subtitle">v2.0.0-beta / NLP Engine Active</div>
+    </div>
+
+    <div class="main-grid">
+        <div class="left-col">
+            <div class="visual-stage">
+                <div id="canvas-container"></div>
+                <div id="loading-text">MOUNTING MESH...</div>
+            </div>
+            
+            <div class="settings-panel">
+                <div class="settings-header">NLP PARAMETERS</div>
+                <div class="slider-row">
+                    <label>TEMPERATURE: <span id="tempDisp">0.7</span></label>
+                    <input type="range" id="tempSlider" min="0.1" max="1.0" step="0.1" value="0.7" oninput="updateUI()">
+                </div>
+                <div class="slider-row">
+                    <label>SPIN SPEED: <span id="spinDisp">0.5</span></label>
+                    <input type="range" id="spinSlider" min="0" max="5" step="0.1" value="0.5" oninput="updateUI()">
+                </div>
+            </div>
+            <button class="btn-toggle" id="audioToggle" onclick="toggleAudio()">🔊 AUDIO: ON</button>
+        </div>
+
+        <div class="chat-col">
+            <div class="chat-history" id="chatHistory">
+                <div class="msg bot">System Initialized. NLP Core Loaded. Text me.</div>
+            </div>
+            <div class="typing-indicator" id="typingIndicator">DimJiPiTi is typing...</div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Initiate query..." onkeypress="handleKeyPress(event)">
+                <button class="btn-send" onclick="sendMessage()">SEND</button>
+            </div>
+        </div>
+
+        <div class="log-col" id="debugLog">
+            <span class="info">[SYSTEM] Initializing Natural Language Processing...</span><br>
+            <span class="info">[SYSTEM] Compiling corpus data...</span><br>
+            <span class="success">[SYSTEM] Ready.</span><br><br>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. 3D RENDER ENGINE (PRESERVED)
+    // ==========================================
+    let scene, camera, renderer, faceMesh, controls;
+    let isSpeaking = false, mouthMesh = null, mouthMorphIndex = -1;
+    let targetMouthValue = 0, currentMouthValue = 0, lipSyncInterval;
+
+    function init3D() {
+        const container = document.getElementById('canvas-container');
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000); camera.position.z = 5;
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true }); 
+        
+        const rect = container.getBoundingClientRect();
+        renderer.setSize(rect.width, rect.height);
+        container.appendChild(renderer.domElement);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.05; controls.autoRotate = true; controls.autoRotateSpeed = 0.5; controls.enableZoom = true;
+        
+        scene.add(new THREE.DirectionalLight(0xffffff, 3.0).position.set(2, 2, 5)); 
+        scene.add(new THREE.AmbientLight(0x404040, 4.0));
+
+        animate3D(); loadBuiltInModel();
+        
+        window.addEventListener('resize', () => {
+            const newRect = container.getBoundingClientRect();
+            renderer.setSize(newRect.width, newRect.height);
+            camera.aspect = newRect.width / newRect.height;
+            camera.updateProjectionMatrix();
+        });
+    }
+
+    function animate3D() {
+        requestAnimationFrame(animate3D); if (controls) controls.update();
+        if (faceMesh) {
+            currentMouthValue += (targetMouthValue - currentMouthValue) * 0.3; 
+            if (mouthMesh && mouthMorphIndex !== -1) mouthMesh.morphTargetInfluences[mouthMorphIndex] = currentMouthValue;
+            else if (isSpeaking) faceMesh.position.y = currentMouthValue * -0.2; 
+            else faceMesh.position.y += (0 - faceMesh.position.y) * 0.1; 
+        }
+        renderer.render(scene, camera);
+    }
+
+    function startLipSync() { clearInterval(lipSyncInterval); targetMouthValue = 0; lipSyncInterval = setInterval(() => { targetMouthValue = (Math.random() > 0.3) ? 0.3 + (Math.random() * 0.7) : 0; }, 120); }
+    function stopLipSync() { clearInterval(lipSyncInterval); targetMouthValue = 0; }
+
+    function loadBuiltInModel() {
+        const loader = new THREE.GLTFLoader();
+        const loadingText = document.getElementById('loading-text');
+        const timeoutFailsafe = setTimeout(() => {
+            loadingText.innerHTML = "⚠️ MESH MOUNT FAILED.<br>CORS Blocked.";
+            loadingText.style.color = "var(--alert)"; loadingText.style.animation = "none";
+        }, 10000);
+
+        loader.load('./perekur_MASK.glb', 
+            function (gltf) {
+                clearTimeout(timeoutFailsafe); loadingText.style.display = 'none'; 
+                if (faceMesh) scene.remove(faceMesh); faceMesh = gltf.scene;
+                mouthMesh = null; mouthMorphIndex = -1;
+                faceMesh.traverse((child) => {
+                    if (child.isMesh && child.morphTargetDictionary) {
+                        for (const key in child.morphTargetDictionary) {
+                            if (mouthMorphIndex === -1) { mouthMesh = child; mouthMorphIndex = child.morphTargetDictionary[key]; }
+                            if (key.toLowerCase().includes('mouth')) { mouthMesh = child; mouthMorphIndex = child.morphTargetDictionary[key]; }
+                        }
+                    }
+                });
+                const box = new THREE.Box3().setFromObject(faceMesh), center = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+                const scale = 3.5 / Math.max(size.x, size.y, size.z);
+                faceMesh.scale.set(scale, scale, scale); faceMesh.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+                scene.add(faceMesh);
+            }, 
+            function(xhr){}, 
+            function(error) { clearTimeout(timeoutFailsafe); loadingText.innerHTML = "⚠️ CORS MESH BLOCK"; loadingText.style.color = "var(--alert)"; loadingText.style.animation="none"; }
+        );
+    }
+
+    // ==========================================
+    // 2. MASSIVE DEEP-LORE CORPUS (DIMAMIRANASHVI)
+    // ==========================================
+    const corpus = [
+        "tarded ahh nga", "ranairad moxda es vafshe", "ara dzma araaa", "bicho uraa", "chamovedio dawera", "titon araa? :D", "what es? :D", 
+        "amis fishka isaa tan ro martivad chasatvirti saitia", "imena sheni ideis pontia", "einaris restoranshi mivdivar saqmian shexvedraze",
+        "PLIAJZE VAAAAAAAR", "pliajze var", "egre vibazreb amieridan", "gushin mwers vici teona vinc ario", "xo anu saxeli saidan prosta",
+        "imedis gmirebi gavxdet", "shevacherot sanam droa gavacherot", "nata2is shansi ari?", "da ras fiqrob", "mara agar vutxari arapeir",
+        "bijo lobom ro miwera manaxa eg mec", "piriqit dzmaaa zustad", "orsuli qalebi ro shvebian egre davdgebi", "fotosesia davjavshnot 😇😇",
+        "cvetshiii", "shuzoidi israelisti", "wamayile am rojas", "wamiyvane cminda micaze 🙏🙏", "shen gaq eseti turebi?", 
+        "kochli darchebi 🥺🥺🥺 tore gaggijebs", "ro ar amodzrao daifiqsire ramit", "tovebs kai xani tkivilebs pizdecia grdzoba",
+        "uiuiii ranairad daikide eg", "prosta dietit vchalichob ra", "au ara davikide varjishi", "shena narmalna", 
+        "rogor gavaketo ver vxvdebi", "ver vaketb eset simgerebs :(", "ARAAAAA", "1.73-75 arvici ver gavige 82.5 max",
+        "eget faqtorebshi kargad var", "au ara arvici risi bralia", "ori kvira giji viyavi exa davwynardi", "ragaca sxva mgonia ver vxvdebi",
+        "tan isedac veridebi", "bicho ravi game dziritadad arc mshivdeba", "an rame yleoba davimarte romelime organoze ragaca an zaiobia",
+        "imena 1-2 saati rasac ar unda vchamde magizianebssavit", "ro vigvidxeb ragacnairad var xolme", "sauzmeze tu dzaan guli ar mereva kvercxs vcham xolme",
+        "mara salatebi xshirad asetuise", "au ravi exa ro amovvardi xan ra xan ra", "xo chifsebs da ylinjebs isedac veridebi",
+        "gabos gavs dzmaaaaaa xooo :Dddd", "suicidis tipebi geebi da qurdebi", "adre iyo vigaca werda mand qurdebi dadiano shavebi acviato aqciis monawileebs",
+        "xo prosta yvelaze giji daxasiatrbaa magati", "sauketeso eqimi romeltanac ro mival amdeni smisgan gadaylevebuli gadamarchens!!!",
+        "sauketeso xodit sul mravals daeswari", "gilocav beberi nikushchiiii", "mara jer arvici ese samwuxarod mainc getyvi xval",
+        "au bicho arvici zustad tu shevdzelb", "vtvlit tu ar vtvlit qurdul dzaladobas", "am dros ici ra mtrvali viyavi?",
+        "au pivapiwie ar gindat aravis?", "ertdroulad sami mesiji kovida mspamaven bliad?", "what is diddyblud doin",
+        "nu amasobashi tame impala memgoni indie kacebis tayloria", "imitoro rame xuchucha rojis kostums vfiqrob",
+        "@everyone fabrika 🚨🚨🚨‼️‼️‼️‼️", "kamorashi ludi 6 lari girs 🤤🤤🤤", "fabro gavawvett", 
+        "yoveldge vuyureb chatshi rogor cdilobs xan vin xan vin amis garkvevas anda me ar daviwyeb garkvevas",
+        "@everyone telaveli stumari chamodis moicodet", "the ol' cxovloba", "447 lari mchirdeba ro universitetis fuli gadavixado",
+        "sigije aris rodesac ertsadaimaves imeoreb imis imedit rom shedegi sheicvleba", "ra yleobaa vpn", 
+        "mfrinav babuebs vagenerireb bolo erti saatia", "11 VIZITI DAMINISHNA KBILIS RQIMMA", "arao sxva problema wesit",
+        "ai gavarkvev kide tu chirdeba da vetyvi ro rame", "ara prosta nikastan sheviyvanet jer", "shen qeni mec ar moxhirs",
+        "tuarada we good fuli kaia", "ara chxbuia ar icoda nikam??? :))))", "lmfao ravi sasacilo iyo kipatastan agar vart ogondp",
+        "ki magati deda movtyan da mere me da kote amovalt", "tesli ideaa 7 mand viqnebit", "me davamtavre momiloce ra fuli baratze gvaq yvelas",
+        "mara dzbenis processhi mainc didebi vipove auuu ver vipove", "da sisqreshi 10", "imena gvagulaeben iqqnbian wamo registrir",
+        "damolesteba pirvelad davserche vaime ar vicodi ro marto bavshvebze itqmeboda", "gamovylevdebi mand ro gavicno martla vinme",
+        "au davregistrirde magaze mirchev? wadiiiii", "jer shesvlaze mere tualetze mere sasmelze", "es ar aris orgia dzmebi gulaoben",
+        "kachistan ertad shevchamdi beat vinmes", "120 bpmshi ro ajgarunot 😇😇", "rs gulaoobs dges ar gaq? 😈😈",
+        "gushinac? ra yle var mekitxa neta a aba tipsy bariooo if if iff", "didi soundsistema da nashebii",
+        "davai nodo gulavi moxode kojorshi da eseni shevawuxot da ar davpatijot 😈😈😈", "dro midis scenarebi rcheba",
+        "mment awi aqac dabrunda haeri gilaoben haerze eseni erti davemtxvett", "yasnna a any aqet xar dziritadad?",
+        "shen mand xo xar ro rame mand uketesi pontia?? wamodi", "tsekkhyy gamoval male tabaxmela chaipadsa memgoni",
+        "sheileba gamovide mec bratsi temu da magis jani bro", "dagitrev magas dzmaa gaurie simon chiqa daitrie",
+        "erti kola daitrie 3 lari girs garet simon chacha", "an eg iyo varianti an slurebis miwera vinmestan da movifiqre ro eg meqna",
+        "bolo neironebi gaviaqtiure xo magari personajia?", "xoo su egre shveba prochia bicho jigaria prosta online prochis",
+        "eu pizdeci chirs albat da turme tyvilia mai tyvili", "araa wegan chaagdo georgam chempioni gaxdao",
+        "da jaywalkingis jarimebit ogond qals yvelaferi daemarta da exa ushveben giraoti an fuli ar enanebat movutyan",
+        "da titqmis ubralod chveni wasvlis istoriaa 9 gverdi miweria paxodu gagzavnac shemilia",
+        "mara recentebshi da your stickersshi isea titqos ar chatvirtula", "favoritebshi migdebs arvici glitchivita",
+        "shegilia ki prosta iketesi jumpscarebi", "arada bevri idea maqvs au es stikeri gavakete da ar madebinebss",
+        "diddyblud iasnia imitoro opozicias gmirad ar sheuracxavs", "sxva temaa bicho ra mnishvnelobaaq dzaan gapopulaulda",
+        "i misterbait mainteresebs unda vnaxo ise eg albomi um sxvatashoris", "amitom kuluulebs migmaaaaaaaa mdzimed magram sabolood gaviazre",
+        "m ar maq qarizma shen mxares vincaa ar gaakritiko aba da magiti miigeb mere yleobas yvelafers",
+        "hitlerad ara chuchu ravi ise icav mag ragaca yleobas tu egre dzaan mogwons gadi shenc dadeqi mashin",
+        "me miricxav amito duck sauce barbara streisand", "ver mogparav albat ufro tqvi ar mogparav gome nikolaurius reebs laparakob",
+        "sad gavideet shen ichitebi? da aravin pasuxobs maiweret vin gamodis vapshe", "kide daketilia? xo gaigo kaco",
+        "shen ar ichitebi gevorg? ertad xart sadme? ravi tu gaichiteba", "@svejunia shen ichitebi xo? sad shavikribooot ki papa",
+        "davai ro moaxlovdebi moiwere gerainis kaifshi gaaparet es kacfi mama sad zar nana", "midit midit me gadmomiricxet me >:}}} agaxiess?",
+        "es arvici exal KONEKTSHIA TUARAAA connectebi ro viyido aqet maxarjinebs freelancingis saiti aro fuli vishovo da",
+        "sportuli centri shendebao tu ragaca vigacam iyida damiylepostet ra", "fuli rogor mices yvelas ro endoba kaia kalasi kaia bisinasi",
+        "kaia kalasi ara polo palasi dzma", "sheamowmet kamandam aba mara chemtan rato araa martla rames xoar shvebian",
+        "va sainteresoa WHAT ertmanetis mixedvit tu ragaca :D anu lokacias xo ikis mixedvit shveba",
+        "4gze xar? vua anu aqciaze vinc xart mag kamandazea saubari?", "androidebze xoaraa marto? :S vua chemtan araa egre sad?",
+        "ras gaigeb dgevandel sociumshi zogi idzaxis kacat davibade qali vaaro an zogi gamova qalat davibade exa kata vaaro",
+        "vigaca dadis heluinio iq gei paradio mixmeba suli", "au lardayinebis filmis scenari ro maq exa gamaxsenda",
+        "da metqi telefoni gavtexe vaime da daimsxvra mtvralma telefoni chavkbiche", "dagxvirtavt tqveni dagxvritavs yvelas",
+        "internetma gamicheda mixeil dzagnidze mixshobs internets GEI FIQREBI GEI FIQREBI O ARAAAA GATISHET ES GEI SIGNALEBI",
+        "ai eSAAA AAE)#)R)#)#)#) davuconnectdebi", "romelic afilirebulia biznesmen mixeil dzagnidzestan romelic arvici vinaa THE RABBITHOLE GOES DEEP BROOO AAEEE",
+        "shps neocitylight yvelas qocs edzaxis ra avadmyofi rojaa", "imena rachuli lobianebivit dagvkecaven 😂😂😂😂",
+        "kastracias damijavshnian iashvilshi?", "wamo kachi shenc ra au ara ar minda meshinia eseti rameebis",
+        "es kacebi movidnen chem saxltan da wamoviyvano?", "despoti blogspoti blowjobi stevejobsi",
+        "mivxvdio igulismxma aaa memgoni ogilizma Rodis unda momeyola?", "skolasji ro zixar da koshmarebi geqneba imena sashushua",
+        "auuu chemi dedaaa movktan pirshi nu mattuebt", "ra yleobaa ise magxeka yle", "elephant ragav erqva",
+        "sait ariaan chemi birja shoria tavaxmellla", "SHEMISHVES LEFTSHU VAR BRATSI OPAAAA", "awh :( ara ukve dnebaa",
+        "sad gaaxsendat prosta Wavedit bozishvuliciyo", "gepeis fuli davxarje ooo 😈😈😈 kiii aa ui raaa ?? a",
+        "kaia gizisi 🤣🤣🤣🤣", "😭😭😭😭😭😭😭😭😭😭😭😭😭😭nephew😭😭😭😭😭😭😭😭😭😭😭😭😭😭"
+    ];
+
+    // ==========================================
+    // 3. ADVANCED NLP ENGINE
+    // ==========================================
+    
+    // Markov Dictionary (Bi-gram mapping)
+    let markovDict = {};
+    let startingWords = [];
+
+    function buildMarkovModel() {
+        corpus.forEach(sentence => {
+            let words = sentence.trim().split(/\s+/);
+            if(words.length > 0) startingWords.push(words[0]);
+            
+            for(let i = 0; i < words.length - 2; i++) {
+                let key = words[i] + ' ' + words[i+1];
+                let next = words[i+2];
+                if(!markovDict[key]) markovDict[key] = [];
+                markovDict[key].push(next);
+            }
+        });
+        logDebug("success", "Markov Chain constructed. " + Object.keys(markovDict).length + " nodes mapped.");
+    }
+
+    function generateMarkovSentence(temp) {
+        let sentence = [];
+        // The higher the temp, the more random the starting word
+        let startWord = startingWords[Math.floor(Math.random() * startingWords.length)];
+        sentence.push(startWord);
+        
+        // Find a valid second word to start the chain
+        let validKeys = Object.keys(markovDict).filter(k => k.startsWith(startWord + " "));
+        if(validKeys.length === 0) return startWord; // fallback
+        
+        let initialKey = validKeys[Math.floor(Math.random() * validKeys.length)];
+        sentence = initialKey.split(" ");
+        
+        let currentKey = initialKey;
+        // Length 3 to 12 words roughly
+        let maxLength = Math.floor(Math.random() * 8) + 4; 
+
+        for(let i = 0; i < maxLength; i++) {
+            let possibleNext = markovDict[currentKey];
+            if(!possibleNext || possibleNext.length === 0) break;
+            
+            let nextWord = possibleNext[Math.floor(Math.random() * possibleNext.length)];
+            sentence.push(nextWord);
+            
+            let splitKey = currentKey.split(" ");
+            currentKey = splitKey[1] + " " + nextWord;
+        }
+
+        return sentence.join(" ");
+    }
+
+    function searchCorpusByIntent(inputTokens) {
+        // Find sentences in corpus that share the most words with input
+        let bestMatch = "";
+        let maxScore = 0;
+
+        corpus.forEach(sentence => {
+            let score = 0;
+            let sentenceTokens = sentence.toLowerCase().split(/\s+/);
+            
+            inputTokens.forEach(token => {
+                if(token.length > 2 && sentenceTokens.includes(token)) {
+                    score++;
+                }
+            });
+
+            if(score > maxScore) {
+                maxScore = score;
+                bestMatch = sentence;
+            }
+        });
+
+        return maxScore > 0 ? bestMatch : null;
+    }
+
+    function processNLP(userInput) {
+        let tokens = userInput.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/);
+        let temp = parseFloat(document.getElementById("tempSlider").value);
+        
+        logDebug("user-query", ">> Input Tokenized: [" + tokens.join(", ") + "]");
+
+        let exactMatch = searchCorpusByIntent(tokens);
+        let response = "";
+
+        // Temperature Logic: Low Temp = Exact Match. High Temp = Random Markov Generation
+        if (exactMatch && Math.random() > (temp - 0.2)) {
+            logDebug("info", "[NLP] Intent match found. Fetching deep memory.");
+            response = exactMatch;
+            // Maybe append a random chunk to make it unique
+            if(Math.random() > 0.5) response += " " + generateMarkovSentence(temp);
+        } else {
+            logDebug("warn", "[NLP] Calculating new neural pathway via Markov Chain.");
+            let sentences = Math.random() > 0.5 ? 2 : 1;
+            for(let i=0; i<sentences; i++) {
+                response += generateMarkovSentence(temp) + (Math.random()>0.5 ? " " : "... ");
+            }
+        }
+        
+        // Final pass for realism
+        response = response.trim();
+        if(!response.match(/[.!?]$/)) response += (Math.random() > 0.5 ? "" : "...");
+        return response;
+    }
+
+    // ==========================================
+    // 4. UI & LOGIC INTEGRATION
+    // ==========================================
+    
+    let audioEnabled = true;
+
+    function logDebug(type, text) {
+        const logBox = document.getElementById("debugLog");
+        logBox.innerHTML += `<span class="${type}">${text}</span><br>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function updateUI() {
+        document.getElementById("tempDisp").innerText = document.getElementById("tempSlider").value;
+        const spinVal = parseFloat(document.getElementById("spinSlider").value);
+        document.getElementById("spinDisp").innerText = spinVal.toFixed(1);
+        if (controls) controls.autoRotateSpeed = spinVal;
+    }
+
+    function toggleAudio() {
+        audioEnabled = !audioEnabled; const btn = document.getElementById("audioToggle");
+        if (audioEnabled) { btn.className = "btn-toggle"; btn.innerText = "🔊 AUDIO: ON"; } 
+        else { btn.className = "btn-toggle off"; btn.innerText = "🔇 AUDIO: OFF"; window.speechSynthesis.cancel(); isSpeaking = false; stopLipSync(); }
+    }
+
+    function playTrashyTTS(text) {
+        if (!audioEnabled || !('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); 
+        let cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        let msg = new SpeechSynthesisUtterance(cleanText);
+        msg.pitch = 0.65; msg.rate = 0.8; 
+        
+        let voices = window.speechSynthesis.getVoices();
+        let eddyVoice = voices.find(v => v.name.includes('Eddy') && v.lang.includes('it'));
+        if (eddyVoice) msg.voice = eddyVoice; else msg.voice = voices.find(v => v.lang.includes('it')) || voices[0];
+
+        msg.onstart = () => { isSpeaking = true; startLipSync(); };
+        msg.onboundary = () => { targetMouthValue = 0.8 + (Math.random() * 0.2); };
+        msg.onend = msg.onerror = () => { isSpeaking = false; stopLipSync(); };
+        window.speechSynthesis.speak(msg);
+    }
+
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        window.speechSynthesis.getVoices();
+    }
+
+    function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+    function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const text = input.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        input.value = '';
+        
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "block";
+        
+        // Simulated cognitive delay based on text complexity
+        const delay = 800 + Math.random() * 1500;
+        
+        setTimeout(() => {
+            typingIndicator.style.display = "none";
+            const response = processNLP(text);
+            appendMessage(response, 'bot');
+            playTrashyTTS(response);
+        }, delay);
+    }
+
+    function appendMessage(text, sender) {
+        const chatHistory = document.getElementById("chatHistory");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `msg ${sender}`;
+        msgDiv.innerText = text;
+        chatHistory.appendChild(msgDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    // BOOT SEQUENCE
+    window.onload = () => {
+        init3D();
+        buildMarkovModel();
+    };
+</script>
+</body>
+</html>
