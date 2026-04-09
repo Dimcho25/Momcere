@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.3.4 - Up'ndisbiatch</title>
+    <title>DimJiPiTi v3.3.5 - Geolatin Patch</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -138,7 +138,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.3.4 / UpnDaClub</div>
+        <div class="subtitle">v3.3.5 / Geolatin Patch</div>
     </div>
 
     <div class="main-grid">
@@ -161,7 +161,7 @@
 
         <div class="chat-col">
             <div class="chat-history" id="chatHistory">
-                <div class="msg bot">System Initialized. Audio pre-loaded. Ras shvebi?</div>
+                <div class="msg bot">System Initialized. Geolatin active. Ras shvebi?</div>
             </div>
             <div class="typing-indicator" id="typingIndicator">DimJiPiTi is typing...</div>
             <div class="chat-input-area">
@@ -175,7 +175,7 @@
 
         <div class="log-col" id="debugLog">
             <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
-            <span class="info">[SYSTEM] Injecting deep memory from DimJipiti.json...</span><br>
+            <span class="info">[SYSTEM] Geolatin transliteration module loaded...</span><br>
             <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
     </div>
@@ -416,9 +416,21 @@
         logDebug("info", "[CALL] Terminated.");
     }
 
+    // ==========================================
+    // 3. GEOLATIN TRANSLITERATOR
+    // ==========================================
+    function transliterateGeorgian(text) {
+        const geoMap = {
+            'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e', 'ვ': 'v', 'ზ': 'z', 'თ': 't', 
+            'ი': 'i', 'კ': 'k', 'ლ': 'l', 'მ': 'm', 'ნ': 'n', 'ო': 'o', 'პ': 'p', 'ჟ': 'zh', 
+            'რ': 'r', 'ს': 's', 'ტ': 't', 'უ': 'u', 'ფ': 'f', 'ქ': 'q', 'ღ': 'gh', 'ყ': 'y', 
+            'შ': 'sh', 'ჩ': 'ch', 'ც': 'c', 'ძ': 'dz', 'წ': 'w', 'ჭ': 'ch', 'ხ': 'x', 'ჯ': 'j', 'ჰ': 'h'
+        };
+        return text.split('').map(char => geoMap[char] || char).join('');
+    }
 
     // ==========================================
-    // 3. CONTINUOUS VAD & TAB SWITCHING RECOVERY
+    // 4. CONTINUOUS VAD & TAB SWITCHING RECOVERY
     // ==========================================
     let recognition = null;
     let silenceTimer = null;
@@ -468,8 +480,12 @@
             
             let interim = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " ";
-                else interim += event.results[i][0].transcript;
+                // Apply Geolatin transliteration instantly as the words come in
+                let rawWord = event.results[i][0].transcript;
+                let latinWord = transliterateGeorgian(rawWord);
+                
+                if (event.results[i].isFinal) finalTranscript += latinWord + " ";
+                else interim += latinWord;
             }
             
             document.getElementById('liveTranscript').innerText = finalTranscript + interim;
@@ -571,7 +587,7 @@
 
 
     // ==========================================
-    // 4. THE RAW DATA & NLP SCRAMBLER
+    // 5. THE RAW DATA & NLP SCRAMBLER
     // ==========================================
     const rawCorpus = [
         "tvalis amosageblad aris martla", "neta ra danishnuleba aqvs", ":Dddd ra magaria",
@@ -619,7 +635,7 @@
         "sigije aris rodesac ertsadaimaves imeoreb imis imedit rom shedegi sheicvleba", "ra yleobaa vpn", 
         "arao sxva problema wesit", "ai gavarkvev kide tu chirdeba da vetyvi ro rame", "ara prosta nikastan sheviyvanet jer", 
         "shen qeni mec ar moxhirs", "tuarada we good fuli kaia", "ara chxbuia ar icoda nikam??? :))))", 
-        "lmfao ravi sasacilo iyo kipatastan agar vart ogondp", "ki magati deda movtyan da mere me da kote amovalt", 
+        "lmfao ravi sasacilo iyo gochostan agar vart ogondp", "ki magati deda movtyan da mere me da kote amovalt", 
         "tesli ideaa 7 mand viqnebit", "me davamtavre momiloce ra fuli baratze gvaq yvelas",
         "mara dzbenis processhi mainc didebi vipove auuu ver vipove", "da sisqreshi 10", 
         "imena gvagulaeben iqqnbian wamo registrir", "damolesteba pirvelad davserche vaime", 
@@ -790,7 +806,7 @@
     }
 
     // ==========================================
-    // 5. STANDARD CHAT UI INTEGRATION
+    // 6. STANDARD CHAT UI INTEGRATION
     // ==========================================
     function logDebug(type, text) {
         const logBox = document.getElementById("debugLog");
