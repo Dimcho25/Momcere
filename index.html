@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DimJiPiTi v3.3.3 - Sesilia Integration</title>
+    <title>DimJiPiTi v3.3.4 - Sesilia Deep Memory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -107,7 +107,7 @@
         /* ========================================= */
         .call-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--call-bg); z-index: 100; 
+            background-color: var(--call-bg); z-index: 100;
             display: none; flex-direction: column; align-items: center; justify-content: flex-end;
             border-radius: 12px; backdrop-filter: blur(10px); padding-bottom: 50px;
             pointer-events: auto; 
@@ -138,7 +138,7 @@
 <div class="container">
     <div class="header">
         <h1 class="title">Dim<span>JiPiTi</span></h1>
-        <div class="subtitle">v3.3.3 / Sesilia Integration</div>
+        <div class="subtitle">v3.3.4 / Sesilia Deep Memory</div>
     </div>
 
     <div class="main-grid">
@@ -175,7 +175,7 @@
 
         <div class="log-col" id="debugLog">
             <span class="info">[SYSTEM] Initializing Hybrid N-Gram Scrambler...</span><br>
-            <span class="info">[SYSTEM] Integrating sesilia.json neural pathways...</span><br>
+            <span class="info">[SYSTEM] Injecting deep memory from sesilia.json...</span><br>
             <span class="success">[SYSTEM] Core Ready.</span><br><br>
         </div>
     </div>
@@ -571,7 +571,7 @@
 
 
     // ==========================================
-    // 4. THE RAW DATA & NLP SCRAMBLER (SESILIA EXPANSION)
+    // 4. THE RAW DATA & NLP SCRAMBLER
     // ==========================================
     const rawCorpus = [
         "tvalis amosageblad aris martla", "neta ra danishnuleba aqvs", ":Dddd ra magaria",
@@ -660,14 +660,41 @@
         "skolasji ro zixar da koshmarebi geqneba imena sashushua", "auuu chemi dedaaa movktan pirshi nu mattuebt", 
         "ra yleobaa ise magxeka yle", "elephant ragav erqva", "sait ariaan chemi birja shoria tavaxmellla", 
         "SHEMISHVES LEFTSHU VAR BRATSI OPAAAA", "😭😭😭😭😭😭nephew😭😭😭😭😭😭",
-        
-        // --- SESILIA INTEGRATION (v3.3.3) ---
-        "naisnaisss", "naisnaisss", "naisnaisss", 
-        "yoo juzepes icnoob?", "ramdeni saerto gvkolia dzma", 
-        "bolo serias ertad vuyurot", "bolo serias ertad vuyurot tore gavgijdebi", 
-        "axali chati gavakete", "gamarjoba xalxo", 
-        "aha ahaaaa chati chati axali chati isev chati", "aha ahaaaa chati chati axali chati isev chati",
-        "au ra magari seria iyo", "dzaan sayvarelia", "rogor miyvars eseni", "Opaopaopaaaaaaaaaa"
+
+        // --- SESILIA INTEGRATION ---
+        "zustad", "orsuli qalebi ro shvebian egre davdgebi", "fotosesia davjavshnot 😇😇", 
+        "cvetshiii", "shuzoidi israelisti", "wamayile am rojas", "wamiyvane", "cminda micaze 🙏🙏", 
+        "shen gaq eseti turebi?", "raari exa es", "esec cols edzebs?", 
+        "rato zis egeti sacodavi saxit bliad daexmaros vinme", "ra sawyalia ;(", 
+        "magaria 5 lariani chaukuche momgerals", "moralis asamagleblad mogiyvanes?", 
+        ":DDDDDD RATO", "mere gamodii raa", "ras mstalkaav", "an es ramesijia ro vacher ar adie", 
+        "ra vudeoa ar mixsniiis", "shemca prosta raaaa", "egaa eg chemo winarexelo dzia kaco", 
+        "modi disckooord", "imena awuxeb kacs", "rao rao ar gagiswordaa", "chven", 
+        "wamo tesshi dges", "private kinoteatri viqiraot", "wamo movxodot ramee", "mashhh", 
+        "rato araa caveashiii ra goimebi arian", "umagresi kacia", "esnei yvela sponsorebia neta?", 
+        "vinaa dato", "magari magaria 👍👍", "arafris", "arafris sesilia shentvis es yvekaferi shentvis", 
+        "es gogoooo", "yvelaze yle fotoa rac gadamigia", "vunvav", "imena martlencaaa", "martalenco", 
+        "barcleona?", "me mchirs eg", "ME LUDEBIS RILEBI MINDA", "RAARI ES", "ra yleobaa", "raari es :(", 
+        "unda daviwyo magit siaruli", "maika da qudi", "mec maq egetebi", "ra magariaaa", 
+        "miyvars avantyofebi 💙💙", "RQ UCNQURIA", ":DDDDD", "this is so me coded ❤️❤️💉", 
+        "cota kvevit daxare kamera ar chans wesierad 😝😝😝💉💉", "🥂🥂", "??", "ese ician", 
+        "bijebi vinc ukraven", "openze,", "chaagde ylis angarishi", "ohoo", 
+        "xoo da zedmeti 40 mrcheba da ravi donacia tu gindat shemidzlia 😭🤞🤞", "RAto", "rao?", 
+        "25 miusajes", "arvici magis dedamovtyan", "chemi klaselia semeni qvia am biws gvari ar maxsovs", 
+        "esfoto chasvi ftzov", "vaiii", "ratoo", "dzaan kai veshia", "da sarochkit", "shavi satvalit", 
+        "kastilit gaval saxlidan da am simgeras movusmen", "sigije", "Rigor uyvarda sawyals papirosi da piva", 
+        "Saflavis qvis foti", "romels uyure?", "bicho ara prosta ojaxi shevkmenit da gvezizgeba ertmaneti ✌️✌️", 
+        "nina javaxishvili", "ar icnob?", "nisaaaa", "rois gamoxavlll", "romelze chitav dges", "vqen", 
+        "ok", "gia ara", "dabadebis dge ro eqneba mere", "tandaruxi ar qvia mamachems SHE AVANTYOFO", 
+        "ager am wams gadavuge", "xarashoo", "modixar aqet?", "sad xar", "💔😨", 
+        "egec sakmarisi iknebaa 😋😋😋", "qeni da gamomigzavne daikide", "faqtebi sapirispiros iuwyebian sesilia!!", 
+        "madloba, vcdi", "romeli girchevnia", "romelshi waxvidodi meniudan gamomdinare", 
+        "sesilia am or restorans shoris ro gqondes archevani", "kiii", "ra gchirs sesilia", "kaai erti", 
+        "avadmyof...", "vso exla gamoiyene es informacia sheni shavbneli tamashobebistvis", 
+        "da shegilia kotestan gaarvkio", "ai eg ukve arvici", "qaj", "kotes dzmakacia da magisgan vicnob", 
+        "arasodessss", "thank you dear 🥰🥰🥰", "espanuris mere", "sauketeso ena", "thank youu", 
+        "shizo", "gijdebi?", "whattt", "houu", "ooooo", "xo vtqvi winazec", "vagvianeb", 
+        "improvidan movdivar", "otxshabats", "BICHOOOOOIO"
     ];
 
     const fallbackConnectors = ["prosta", "anu", "xoda", "mara", "imena", "tan", "magito", "da", "ise vafshe"];
